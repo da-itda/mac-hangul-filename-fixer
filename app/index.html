@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>한글본드</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="settings-window">
+      <nav class="tabs" aria-label="설정 탭">
+        <button class="tab active" type="button" data-tab="general">
+          <span class="tab-icon general-icon" aria-hidden="true"></span>
+          일반
+        </button>
+        <button class="tab" type="button" data-tab="folders">
+          <span class="tab-icon folders-icon" aria-hidden="true"></span>
+          폴더
+        </button>
+        <button class="tab" type="button" data-tab="logs">
+          <span class="tab-icon logs-icon" aria-hidden="true"></span>
+          로그
+        </button>
+        <button class="tab" type="button" data-tab="about">
+          <span class="tab-icon about-icon" aria-hidden="true"></span>
+          정보
+        </button>
+      </nav>
+
+      <section class="tab-panel active" data-panel="general">
+        <div class="hero-row">
+          <img class="brand-mark" src="./hangulbond_img.png" alt="" />
+          <div>
+            <h2>한글본드</h2>
+            <p>자소 분리된 한글 파일명과 폴더명을 조용히 붙여 정리합니다.</p>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div>
+            <span>감시 상태</span>
+            <strong id="watch-status">수동 검사 우선</strong>
+          </div>
+          <div>
+            <span>변환 대기</span>
+            <strong id="wait-summary">3초</strong>
+          </div>
+          <div>
+            <span>저장된 폴더</span>
+            <strong id="folder-count">0개</strong>
+          </div>
+        </div>
+
+        <div class="settings-group general-settings">
+          <label class="setting-row">
+            <span>파일 저장 후 대기</span>
+            <select id="wait-time">
+              <option value="1000">1초</option>
+              <option value="3000">3초</option>
+              <option value="5000">5초</option>
+              <option value="10000">10초</option>
+            </select>
+          </label>
+          <label class="setting-row">
+            <span>자동 감시</span>
+            <span class="row-control">
+              <input id="auto-watch" type="checkbox" />
+              <span>사용</span>
+            </span>
+          </label>
+          <label class="setting-row">
+            <span>로그인 시 자동 실행</span>
+            <span class="row-control">
+              <input id="launch-at-login" type="checkbox" />
+              <span>사용</span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="folders">
+        <div class="folder-table">
+          <ul id="folder-list" class="folder-list">
+            <li>저장된 폴더가 없습니다.</li>
+          </ul>
+          <div class="table-controls" aria-label="감시 폴더 관리">
+            <button id="choose-folder" class="control-button" type="button" aria-label="폴더 추가">+</button>
+            <button id="remove-selected-folder" class="control-button" type="button" aria-label="선택 폴더 삭제" disabled>-</button>
+          </div>
+        </div>
+
+        <div class="settings-group folder-settings">
+          <div class="setting-row">
+            <span>선택 폴더</span>
+            <span id="selected-folder" class="path-field">선택된 폴더가 없습니다.</span>
+          </div>
+          <label class="setting-row">
+            <span>감시 상태</span>
+            <span class="row-control">
+              <input id="selected-folder-enabled" type="checkbox" disabled />
+              <span>자동 감시 포함</span>
+            </span>
+          </label>
+          <label class="setting-row">
+            <span>선택 폴더 범위</span>
+            <span class="row-control">
+              <input id="selected-folder-recursive" type="checkbox" disabled />
+              <span>하위 폴더 포함</span>
+            </span>
+          </label>
+          <label class="setting-row">
+            <span>새 폴더 기본값</span>
+            <span class="row-control">
+              <input id="default-recursive" type="checkbox" checked />
+              <span>하위 폴더 포함</span>
+            </span>
+          </label>
+        </div>
+
+        <p id="message" class="message">테스트용 폴더를 선택한 뒤 검사해보세요.</p>
+
+        <div id="batch-progress" class="batch-progress" hidden>
+          <div class="progress-head">
+            <span id="progress-title">정리 중</span>
+            <span id="progress-count">0 / 0</span>
+          </div>
+          <progress id="progress-bar" max="1" value="0"></progress>
+          <p id="progress-detail">항목을 준비하고 있습니다.</p>
+        </div>
+
+        <div class="action-row">
+          <button id="scan-folder" type="button" disabled>검사</button>
+          <button id="normalize-folder" type="button" disabled>지금 정리</button>
+        </div>
+
+        <div class="result-box">
+          <h3>검사 결과</h3>
+          <ol id="targets" class="logs">
+            <li>아직 검사한 폴더가 없습니다.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="logs">
+        <div class="section-head">
+          <div>
+            <h2>최근 로그</h2>
+            <p>최근 처리한 항목 10개를 표시합니다.</p>
+          </div>
+          <button id="refresh-logs" type="button">새로고침</button>
+        </div>
+        <ol id="logs" class="logs">
+          <li>아직 처리한 파일이 없습니다.</li>
+        </ol>
+      </section>
+
+      <section class="tab-panel about-panel" data-panel="about">
+        <img class="about-logo" src="./hangulbond_img.png" alt="" />
+        <h2>한글본드</h2>
+        <p id="app-version">Version 0.1.0</p>
+        <p>파일 내용은 변경하지 않고, 파일명과 폴더명만 NFC 형태로 정리합니다.</p>
+
+        <div class="settings-group about-details">
+          <div class="setting-row">
+            <span>데이터 위치</span>
+            <span id="app-data-dir" class="path-field">-</span>
+          </div>
+          <div class="setting-row">
+            <span>설정 파일</span>
+            <span id="settings-path" class="path-field">-</span>
+          </div>
+          <div class="setting-row">
+            <span>로그 파일</span>
+            <span id="log-path" class="path-field">-</span>
+          </div>
+          <div class="setting-row">
+            <span>자동 실행</span>
+            <span id="launch-state" class="plain-value">-</span>
+          </div>
+          <div class="setting-row">
+            <span>웹사이트</span>
+            <a id="website-link" class="plain-link" href="https://newer.co.kr" rel="noreferrer">newer.co.kr</a>
+          </div>
+          <div class="setting-row">
+            <span>업데이트</span>
+            <span class="update-control">
+              <span id="update-state" class="plain-value">확인 전</span>
+              <button id="check-update" type="button">확인</button>
+            </span>
+          </div>
+          <div id="update-progress" class="setting-row update-progress-row" hidden>
+            <span>진행률</span>
+            <span>
+              <progress id="update-progress-bar" max="1" value="0"></progress>
+              <span id="update-progress-detail" class="progress-caption">대기 중</span>
+            </span>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "hangul-nfc-normalizer",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "description": "Background utility for safely normalizing Korean file and folder names to NFC.",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "test": "node --test",
+    "test:normalizer": "node --test shared/unicode-normalizer/test/*.test.js",
+    "test:rust": "cd src-tauri && cargo test",
+    "release:bump": "node scripts/bump-version.mjs patch",
+    "release:bump:minor": "node scripts/bump-version.mjs minor",
+    "release:manifest": "node scripts/generate-update-manifest.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-dialog": "^2.5.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

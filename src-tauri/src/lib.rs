@@ -1,0 +1,603 @@
+mod logs;
+mod normalizer;
+mod scanner;
+mod settings;
+mod stabilization;
+mod watcher;
+
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::Mutex;
+
+use logs::{append_rename_results, read_recent_logs, LogEntry};
+use scanner::{
+    normalize_directory_with_progress, scan_directory, NormalizeOptions, NormalizeProgress,
+    RenameResult, ScanTarget,
+};
+use settings::{load_settings_from_file, save_settings_to_file, AppSettings};
+use tauri::{
+    async_runtime,
+    image::Image,
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, WindowEvent,
+};
+use tauri_plugin_autostart::ManagerExt;
+use watcher::{WatchService, WatchStatus};
+
+const LEGACY_IDENTIFIERS: &[&str] = &["com.codex.hangul-nfc-normalizer", "com.hangulbond.app"];
+const AUTOSTART_ENTRY_NAME: &str = "HangulBond";
+const WEBSITE_URL: &str = "https://newer.co.kr";
+const LEGACY_AUTOSTART_MARKERS: &[&str] = &[
+    "한글본드",
+    "한글 파일명 정리기",
+    "hangul-nfc-normalizer",
+    "com.codex.hangul-nfc-normalizer",
+    "com.hangulbond.app",
+    "com.hangulbond.desktop",
+];
+
+struct AppState {
+    watch_service: Mutex<WatchService>,
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppInfo {
+    version: String,
+    app_data_dir: String,
+    settings_path: String,
+    log_path: String,
+    launch_at_login: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NormalizeProgressEvent {
+    scope: String,
+    #[serde(flatten)]
+    progress: NormalizeProgress,
+}
+
+#[tauri::command]
+fn scan_folder(path: String, recursive: Option<bool>) -> Result<Vec<ScanTarget>, String> {
+    scan_directory(PathBuf::from(path).as_path(), recursive.unwrap_or(true))
+}
+
+#[tauri::command]
+async fn normalize_folder(
+    app: AppHandle,
+    path: String,
+    recursive: Option<bool>,
+    dry_run: Option<bool>,
+    stabilization_wait_ms: Option<u64>,
+) -> Result<Vec<RenameResult>, String> {
+    let should_log = !dry_run.unwrap_or(false);
+    let root_path = PathBuf::from(path);
+    let options = NormalizeOptions {
+        recursive: recursive.unwrap_or(true),
+        dry_run: dry_run.unwrap_or(false),
+        stabilization_wait_ms: stabilization_wait_ms.unwrap_or(3_000),
+    };
+    let log_path = log_file_path(&app)?;
+    let app_for_worker = app.clone();
+
+    async_runtime::spawn_blocking(move || {
+        let results = normalize_directory_with_progress(&root_path, options, |progress| {
+            emit_normalize_progress(&app_for_worker, "folder", progress);
+        })?;
+
+        if should_log {
+            append_rename_results(&log_path, &results)?;
+        }
+
+        Ok(results)
+    })
+    .await
+    .map_err(|error| format!("normalization worker failed: {error}"))?
+}
+
+#[tauri::command]
+fn recent_logs(app: AppHandle, limit: Option<usize>) -> Result<Vec<LogEntry>, String> {
+    read_recent_logs(&log_file_path(&app)?, limit.unwrap_or(10))
+}
+
+#[tauri::command]
+fn load_settings(app: AppHandle) -> Result<AppSettings, String> {
+    let mut settings = load_settings_from_file(&settings_file_path(&app)?)?;
+    if let Ok(enabled) = launch_at_login_enabled(&app) {
+        settings.launch_at_login = enabled;
+    }
+    Ok(settings)
+}
+
+#[tauri::command]
+fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppSettings, String> {
+    let mut normalized_settings = settings.normalized();
+    sync_launch_at_login(&app, normalized_settings.launch_at_login)?;
+    normalized_settings.launch_at_login =
+        launch_at_login_enabled(&app).unwrap_or(normalized_settings.launch_at_login);
+    save_settings_to_file(&settings_file_path(&app)?, &normalized_settings)?;
+    sync_watch_service(&app, &normalized_settings)?;
+    Ok(normalized_settings)
+}
+
+#[tauri::command]
+fn start_auto_watch(app: AppHandle) -> Result<WatchStatus, String> {
+    let mut settings = load_settings_from_file(&settings_file_path(&app)?)?;
+    settings.auto_watch_enabled = true;
+    save_settings_to_file(&settings_file_path(&app)?, &settings)?;
+    sync_watch_service(&app, &settings)
+}
+
+#[tauri::command]
+fn stop_auto_watch(app: AppHandle) -> Result<WatchStatus, String> {
+    let mut settings = load_settings_from_file(&settings_file_path(&app)?)?;
+    settings.auto_watch_enabled = false;
+    save_settings_to_file(&settings_file_path(&app)?, &settings)?;
+
+    let state = app.state::<AppState>();
+    let mut watch_service = state
+        .watch_service
+        .lock()
+        .map_err(|_| "failed to lock watch service".to_string())?;
+    Ok(watch_service.stop())
+}
+
+#[tauri::command]
+fn auto_watch_status(app: AppHandle) -> Result<WatchStatus, String> {
+    let state = app.state::<AppState>();
+    let watch_service = state
+        .watch_service
+        .lock()
+        .map_err(|_| "failed to lock watch service".to_string())?;
+    Ok(watch_service.status())
+}
+
+#[tauri::command]
+async fn normalize_saved_folders(app: AppHandle) -> Result<Vec<RenameResult>, String> {
+    let app_for_worker = app.clone();
+    async_runtime::spawn_blocking(move || normalize_saved_folders_impl(&app_for_worker))
+        .await
+        .map_err(|error| format!("normalization worker failed: {error}"))?
+}
+
+#[tauri::command]
+fn app_info(app: AppHandle) -> Result<AppInfo, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("failed to resolve app data directory: {error}"))?;
+    let settings_path = settings_file_path(&app)?;
+    let log_path = log_file_path(&app)?;
+    let version = app.package_info().version.to_string();
+    let launch_at_login = launch_at_login_enabled(&app).unwrap_or(false);
+
+    Ok(AppInfo {
+        version,
+        app_data_dir: app_data_dir.display().to_string(),
+        settings_path: settings_path.display().to_string(),
+        log_path: log_path.display().to_string(),
+        launch_at_login,
+    })
+}
+
+#[tauri::command]
+fn open_website() -> Result<(), String> {
+    open_external_url(WEBSITE_URL)
+}
+
+fn log_file_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("failed to resolve app data directory: {error}"))?;
+    Ok(app_data_dir.join("activity.jsonl"))
+}
+
+fn settings_file_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("failed to resolve app data directory: {error}"))?;
+    Ok(app_data_dir.join("settings.json"))
+}
+
+fn migrate_legacy_app_data(app: &AppHandle) -> Result<(), String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("failed to resolve app data directory: {error}"))?;
+    let Some(parent_dir) = app_data_dir.parent() else {
+        return Ok(());
+    };
+
+    fs::create_dir_all(&app_data_dir).map_err(|error| {
+        format!(
+            "failed to create app data directory {}: {error}",
+            app_data_dir.display()
+        )
+    })?;
+
+    for identifier in LEGACY_IDENTIFIERS {
+        let legacy_data_dir = parent_dir.join(identifier);
+        if legacy_data_dir == app_data_dir || !legacy_data_dir.is_dir() {
+            continue;
+        }
+
+        copy_if_missing(&legacy_data_dir, &app_data_dir, "settings.json")?;
+        copy_if_missing(&legacy_data_dir, &app_data_dir, "activity.jsonl")?;
+    }
+
+    Ok(())
+}
+
+fn copy_if_missing(
+    source_dir: &Path,
+    destination_dir: &Path,
+    file_name: &str,
+) -> Result<(), String> {
+    let source = source_dir.join(file_name);
+    let destination = destination_dir.join(file_name);
+
+    if !source.is_file() || destination.exists() {
+        return Ok(());
+    }
+
+    fs::copy(&source, &destination).map_err(|error| {
+        format!(
+            "failed to migrate {} to {}: {error}",
+            source.display(),
+            destination.display()
+        )
+    })?;
+
+    Ok(())
+}
+
+fn open_external_url(url: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let mut command = {
+        let mut command = Command::new("open");
+        command.arg(url);
+        command
+    };
+
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = Command::new("cmd");
+        command.args(["/C", "start", "", url]);
+        command
+    };
+
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    let mut command = {
+        let mut command = Command::new("xdg-open");
+        command.arg(url);
+        command
+    };
+
+    command
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("failed to open {url}: {error}"))
+}
+
+fn sync_watch_service(app: &AppHandle, settings: &AppSettings) -> Result<WatchStatus, String> {
+    let state = app.state::<AppState>();
+    let mut watch_service = state
+        .watch_service
+        .lock()
+        .map_err(|_| "failed to lock watch service".to_string())?;
+
+    if settings.auto_watch_enabled {
+        watch_service.start(settings.clone(), log_file_path(app)?, Some(app.clone()))
+    } else {
+        Ok(watch_service.stop())
+    }
+}
+
+fn sync_launch_at_login(app: &AppHandle, enabled: bool) -> Result<(), String> {
+    let autolaunch = app.autolaunch();
+    let current = autolaunch
+        .is_enabled()
+        .map_err(|error| format!("failed to read login item state: {error}"))?;
+
+    if current == enabled {
+        return Ok(());
+    }
+
+    if enabled {
+        autolaunch
+            .enable()
+            .map_err(|error| format!("failed to enable launch at login: {error}"))
+    } else {
+        autolaunch
+            .disable()
+            .map_err(|error| format!("failed to disable launch at login: {error}"))
+    }
+}
+
+fn launch_at_login_enabled(app: &AppHandle) -> Result<bool, String> {
+    app.autolaunch()
+        .is_enabled()
+        .map_err(|error| format!("failed to read login item state: {error}"))
+}
+
+#[cfg(target_os = "macos")]
+fn cleanup_legacy_autostart_entries() -> Result<bool, String> {
+    let Some(home_dir) = std::env::var_os("HOME").map(PathBuf::from) else {
+        return Ok(false);
+    };
+    let launch_agents_dir = home_dir.join("Library").join("LaunchAgents");
+
+    if !launch_agents_dir.is_dir() {
+        return Ok(false);
+    }
+
+    let entries = fs::read_dir(&launch_agents_dir).map_err(|error| {
+        format!(
+            "failed to read launch agents directory {}: {error}",
+            launch_agents_dir.display()
+        )
+    })?;
+    let mut removed_any = false;
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+
+        if path.extension().and_then(|value| value.to_str()) != Some("plist") {
+            continue;
+        }
+
+        let stem = path.file_stem().and_then(|value| value.to_str()).unwrap_or("");
+        if stem == AUTOSTART_ENTRY_NAME {
+            continue;
+        }
+
+        let content = fs::read_to_string(&path).unwrap_or_default();
+        let is_legacy_hangulbond_entry = LEGACY_AUTOSTART_MARKERS
+            .iter()
+            .any(|marker| stem.contains(marker) || content.contains(marker));
+
+        if !is_legacy_hangulbond_entry {
+            continue;
+        }
+
+        unload_launch_agent(&path);
+        fs::remove_file(&path)
+            .map_err(|error| format!("failed to remove {}: {error}", path.display()))?;
+        removed_any = true;
+    }
+
+    Ok(removed_any)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn cleanup_legacy_autostart_entries() -> Result<bool, String> {
+    Ok(false)
+}
+
+#[cfg(target_os = "macos")]
+fn unload_launch_agent(path: &Path) {
+    if let Some(uid) = current_uid() {
+        let _ = Command::new("launchctl")
+            .args(["bootout", &format!("gui/{uid}"), &path.display().to_string()])
+            .output();
+    }
+
+    let _ = Command::new("launchctl")
+        .arg("unload")
+        .arg(path)
+        .output();
+}
+
+#[cfg(target_os = "macos")]
+fn current_uid() -> Option<String> {
+    let output = Command::new("id").arg("-u").output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let uid = String::from_utf8(output.stdout).ok()?;
+    Some(uid.trim().to_string())
+}
+
+fn emit_normalize_progress(app: &AppHandle, scope: &str, progress: NormalizeProgress) {
+    let _ = app.emit(
+        "normalize-progress",
+        NormalizeProgressEvent {
+            scope: scope.to_string(),
+            progress,
+        },
+    );
+}
+
+fn normalize_saved_folders_impl(app: &AppHandle) -> Result<Vec<RenameResult>, String> {
+    let settings = load_settings_from_file(&settings_file_path(app)?)?;
+    let mut all_results = Vec::new();
+    let mut processed_any_folder = false;
+
+    for folder in settings
+        .watch_folders
+        .iter()
+        .filter(|folder| folder.enabled)
+    {
+        if !folder.path.is_dir() {
+            continue;
+        }
+
+        processed_any_folder = true;
+        let app_for_progress = app.clone();
+        let mut results = normalize_directory_with_progress(
+            &folder.path,
+            NormalizeOptions {
+                recursive: folder.recursive,
+                dry_run: false,
+                stabilization_wait_ms: settings.stabilization_wait_ms,
+            },
+            |progress| {
+                emit_normalize_progress(&app_for_progress, "saved-folders", progress);
+            },
+        )?;
+        all_results.append(&mut results);
+    }
+
+    if !processed_any_folder {
+        emit_normalize_progress(
+            app,
+            "saved-folders",
+            NormalizeProgress {
+                phase: "completed".to_string(),
+                completed: 0,
+                total: 0,
+                current_name: None,
+                final_name: None,
+                status: None,
+                reason: None,
+            },
+        );
+    }
+
+    append_rename_results(&log_file_path(app)?, &all_results)?;
+    let _ = app.emit("manual-results", &all_results);
+    Ok(all_results)
+}
+
+pub fn run() {
+    tauri::Builder::default()
+        .manage(AppState {
+            watch_service: Mutex::new(WatchService::new()),
+        })
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .app_name(AUTOSTART_ENTRY_NAME)
+                .build(),
+        )
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|app| {
+            let _ = migrate_legacy_app_data(app.handle());
+            let legacy_autostart_was_enabled =
+                cleanup_legacy_autostart_entries().unwrap_or(false);
+
+            let scan_now = MenuItem::with_id(
+                app,
+                "scan_now",
+                "즉시 확인 및 변경",
+                true,
+                None::<&str>,
+            )?;
+            let show_settings = MenuItem::with_id(
+                app,
+                "show_settings",
+                "한글본드 설정",
+                true,
+                None::<&str>,
+            )?;
+            let quit = MenuItem::with_id(
+                app,
+                "quit",
+                "한글본드 종료",
+                true,
+                None::<&str>,
+            )?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let menu = Menu::with_items(app, &[&scan_now, &show_settings, &separator, &quit])?;
+            let tray_icon = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
+
+            let _tray = TrayIconBuilder::with_id("main-tray")
+                .icon(tray_icon)
+                .icon_as_template(false)
+                .tooltip("한글본드")
+                .menu(&menu)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "scan_now" => {
+                        let app_handle = app.clone();
+                        std::thread::spawn(move || {
+                            if let Err(error) = normalize_saved_folders_impl(&app_handle) {
+                                eprintln!("failed to normalize saved folders: {error}");
+                            }
+                        });
+
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "show_settings" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            let settings_path = settings_file_path(app.handle())?;
+            let is_first_run = !settings_path.exists();
+            let mut settings = load_settings_from_file(&settings_path)?;
+            if legacy_autostart_was_enabled && settings.launch_at_login {
+                let _ = sync_launch_at_login(app.handle(), true);
+            }
+            if let Ok(enabled) = launch_at_login_enabled(app.handle()) {
+                settings.launch_at_login = enabled;
+            }
+            let _ = save_settings_to_file(&settings_path, &settings);
+            let _ = sync_watch_service(app.handle(), &settings)?;
+
+            if let Some(window) = app.get_webview_window("main") {
+                if is_first_run {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                } else {
+                    let _ = window.hide();
+                }
+            }
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            scan_folder,
+            normalize_folder,
+            recent_logs,
+            load_settings,
+            save_settings,
+            start_auto_watch,
+            stop_auto_watch,
+            auto_watch_status,
+            normalize_saved_folders,
+            app_info,
+            open_website
+        ])
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}

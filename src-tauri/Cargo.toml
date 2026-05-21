@@ -1,0 +1,28 @@
+[package]
+name = "hangul-nfc-normalizer"
+version = "0.1.1"
+description = "Safely normalize Korean file and folder names to NFC."
+authors = ["Codex"]
+edition = "2021"
+
+[lib]
+name = "hangul_nfc_normalizer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.1", features = [] }
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tauri = { version = "2.11.2", features = ["tray-icon", "image-png"] }
+tauri-plugin-autostart = "2.5.1"
+tauri-plugin-dialog = "2.5.1"
+tauri-plugin-fs = { version = "2.5.1", features = ["watch"] }
+unicode-normalization = "0.1.25"
+notify = "8.2.0"
+tauri-plugin-updater = "2.10.1"
+tauri-plugin-process = "2.3.1"
+
+[dev-dependencies]
+tempfile = "3.23.0"
