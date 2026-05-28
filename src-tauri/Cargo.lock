@@ -1275,8 +1275,9 @@ dependencies = [
 
 [[package]]
 name = "hangul-nfc-normalizer"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
+ "libc",
  "notify",
  "serde",
  "serde_json",

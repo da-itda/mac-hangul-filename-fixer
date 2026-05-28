@@ -10,6 +10,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Mutex;
 
+#[cfg(unix)]
+use std::os::fd::AsRawFd;
+
 use logs::{append_rename_results, read_recent_logs, LogEntry};
 use scanner::{
     normalize_directory_with_progress, scan_directory, NormalizeOptions, NormalizeProgress,
@@ -40,6 +43,7 @@ const LEGACY_AUTOSTART_MARKERS: &[&str] = &[
 
 struct AppState {
     watch_service: Mutex<WatchService>,
+    instance_lock: Mutex<Option<fs::File>>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -204,6 +208,52 @@ fn settings_file_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir.join("settings.json"))
 }
 
+fn acquire_single_instance_lock(app: &AppHandle) -> Result<Option<fs::File>, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("failed to resolve app data directory: {error}"))?;
+    fs::create_dir_all(&app_data_dir).map_err(|error| {
+        format!(
+            "failed to create app data directory {}: {error}",
+            app_data_dir.display()
+        )
+    })?;
+
+    let lock_path = app_data_dir.join("hangulbond.instance.lock");
+    let lock_file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&lock_path)
+        .map_err(|error| format!("failed to open {}: {error}", lock_path.display()))?;
+
+    if try_lock_instance_file(&lock_file)? {
+        Ok(Some(lock_file))
+    } else {
+        Ok(None)
+    }
+}
+
+#[cfg(unix)]
+fn try_lock_instance_file(lock_file: &fs::File) -> Result<bool, String> {
+    let result = unsafe { libc::flock(lock_file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
+    if result == 0 {
+        return Ok(true);
+    }
+
+    let error = std::io::Error::last_os_error();
+    match error.kind() {
+        std::io::ErrorKind::WouldBlock => Ok(false),
+        _ => Err(format!("failed to lock instance file: {error}")),
+    }
+}
+
+#[cfg(not(unix))]
+fn try_lock_instance_file(_lock_file: &fs::File) -> Result<bool, String> {
+    Ok(true)
+}
+
 fn migrate_legacy_app_data(app: &AppHandle) -> Result<(), String> {
     let app_data_dir = app
         .path()
@@ -351,7 +401,10 @@ fn cleanup_legacy_autostart_entries() -> Result<bool, String> {
             continue;
         }
 
-        let stem = path.file_stem().and_then(|value| value.to_str()).unwrap_or("");
+        let stem = path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .unwrap_or("");
         if stem == AUTOSTART_ENTRY_NAME {
             continue;
         }
@@ -383,14 +436,15 @@ fn cleanup_legacy_autostart_entries() -> Result<bool, String> {
 fn unload_launch_agent(path: &Path) {
     if let Some(uid) = current_uid() {
         let _ = Command::new("launchctl")
-            .args(["bootout", &format!("gui/{uid}"), &path.display().to_string()])
+            .args([
+                "bootout",
+                &format!("gui/{uid}"),
+                &path.display().to_string(),
+            ])
             .output();
     }
 
-    let _ = Command::new("launchctl")
-        .arg("unload")
-        .arg(path)
-        .output();
+    let _ = Command::new("launchctl").arg("unload").arg(path).output();
 }
 
 #[cfg(target_os = "macos")]
@@ -470,6 +524,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
             watch_service: Mutex::new(WatchService::new()),
+            instance_lock: Mutex::new(None),
         })
         .plugin(
             tauri_plugin_autostart::Builder::new()
@@ -481,31 +536,23 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            let _ = migrate_legacy_app_data(app.handle());
-            let legacy_autostart_was_enabled =
-                cleanup_legacy_autostart_entries().unwrap_or(false);
+            let Some(instance_lock) = acquire_single_instance_lock(app.handle())? else {
+                std::process::exit(0);
+            };
+            let state = app.state::<AppState>();
+            *state
+                .instance_lock
+                .lock()
+                .map_err(|_| "failed to lock instance state".to_string())? = Some(instance_lock);
 
-            let scan_now = MenuItem::with_id(
-                app,
-                "scan_now",
-                "즉시 확인 및 변경",
-                true,
-                None::<&str>,
-            )?;
-            let show_settings = MenuItem::with_id(
-                app,
-                "show_settings",
-                "한글본드 설정",
-                true,
-                None::<&str>,
-            )?;
-            let quit = MenuItem::with_id(
-                app,
-                "quit",
-                "한글본드 종료",
-                true,
-                None::<&str>,
-            )?;
+            let _ = migrate_legacy_app_data(app.handle());
+            let legacy_autostart_was_enabled = cleanup_legacy_autostart_entries().unwrap_or(false);
+
+            let scan_now =
+                MenuItem::with_id(app, "scan_now", "즉시 확인 및 변경", true, None::<&str>)?;
+            let show_settings =
+                MenuItem::with_id(app, "show_settings", "한글본드 설정", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "한글본드 종료", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let menu = Menu::with_items(app, &[&scan_now, &show_settings, &separator, &quit])?;
             let tray_icon = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
@@ -600,4 +647,30 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(all(test, unix))]
+mod single_instance_tests {
+    use super::try_lock_instance_file;
+    use std::fs;
+
+    #[test]
+    fn second_lock_attempt_is_rejected() {
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let lock_path = temp_dir.path().join("hangulbond.instance.lock");
+        let first = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&lock_path)
+            .expect("open first lock");
+        let second = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&lock_path)
+            .expect("open second lock");
+
+        assert!(try_lock_instance_file(&first).expect("first lock"));
+        assert!(!try_lock_instance_file(&second).expect("second lock"));
+    }
 }
