@@ -2,7 +2,6 @@ const { invoke } = window.__TAURI__.core;
 const { open } = window.__TAURI__.dialog;
 const { listen } = window.__TAURI__.event;
 const updater = window.__TAURI__.updater;
-const processApi = window.__TAURI__.process;
 
 const selectedFolder = document.querySelector("#selected-folder");
 const chooseFolderButton = document.querySelector("#choose-folder");
@@ -242,7 +241,7 @@ async function loadAppInfo() {
 }
 
 async function checkForUpdates() {
-  if (!updater?.check || !processApi?.relaunch) {
+  if (!updater?.check) {
     updateState.textContent = "사용할 수 없음";
     updateState.title = "업데이트 플러그인을 불러오지 못했습니다.";
     return;
@@ -286,7 +285,7 @@ async function checkForUpdates() {
     });
 
     updateState.textContent = "재시작 중";
-    await processApi.relaunch();
+    await invoke("restart_app");
   } catch (error) {
     const errorText = String(error);
     const userMessage = errorText.includes("platforms")

@@ -22,14 +22,20 @@
 }
 
 body {
+  height: 100vh;
   min-width: 500px;
   margin: 0;
   background: var(--app-bg);
+  overflow: hidden;
 }
 
 .settings-window {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
   background: var(--app-bg);
+  overflow: hidden;
 }
 
 h2,
@@ -45,6 +51,7 @@ p {
 
 .tabs {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -141,9 +148,13 @@ p {
 
 .tab-panel {
   display: none;
+  width: 100%;
+  flex: 1 1 auto;
   max-width: 470px;
   margin: 0 auto;
   padding: 16px 18px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .tab-panel.active {

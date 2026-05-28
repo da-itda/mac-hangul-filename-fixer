@@ -192,6 +192,12 @@ fn open_website() -> Result<(), String> {
     open_external_url(WEBSITE_URL)
 }
 
+#[tauri::command]
+fn restart_app(app: AppHandle) -> Result<(), String> {
+    release_runtime_guards(&app)?;
+    app.restart();
+}
+
 fn log_file_path(app: &AppHandle) -> Result<PathBuf, String> {
     let app_data_dir = app
         .path()
@@ -252,6 +258,20 @@ fn try_lock_instance_file(lock_file: &fs::File) -> Result<bool, String> {
 #[cfg(not(unix))]
 fn try_lock_instance_file(_lock_file: &fs::File) -> Result<bool, String> {
     Ok(true)
+}
+
+fn release_runtime_guards(app: &AppHandle) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    state
+        .watch_service
+        .lock()
+        .map_err(|_| "failed to lock watch service".to_string())?
+        .stop();
+    *state
+        .instance_lock
+        .lock()
+        .map_err(|_| "failed to lock instance state".to_string())? = None;
+    Ok(())
 }
 
 fn migrate_legacy_app_data(app: &AppHandle) -> Result<(), String> {
@@ -536,6 +556,14 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            {
+                let _ = app.handle().set_dock_visibility(false);
+                let _ = app
+                    .handle()
+                    .set_activation_policy(tauri::ActivationPolicy::Accessory);
+            }
+
             let Some(instance_lock) = acquire_single_instance_lock(app.handle())? else {
                 std::process::exit(0);
             };
@@ -637,7 +665,8 @@ pub fn run() {
             auto_watch_status,
             normalize_saved_folders,
             app_info,
-            open_website
+            open_website,
+            restart_app
         ])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
