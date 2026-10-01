@@ -583,11 +583,16 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "한글본드 종료", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let menu = Menu::with_items(app, &[&scan_now, &show_settings, &separator, &quit])?;
-            let tray_icon = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
+            // macOS는 템플릿 아이콘으로 메뉴바 밝기에 맞춰 시스템이 색을 칠한다.
+            #[cfg(target_os = "macos")]
+            let tray_icon_bytes = include_bytes!("../icons/tray-template.png").as_slice();
+            #[cfg(not(target_os = "macos"))]
+            let tray_icon_bytes = include_bytes!("../icons/tray.png").as_slice();
+            let tray_icon = Image::from_bytes(tray_icon_bytes)?;
 
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(tray_icon)
-                .icon_as_template(false)
+                .icon_as_template(cfg!(target_os = "macos"))
                 .tooltip("한글본드")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
