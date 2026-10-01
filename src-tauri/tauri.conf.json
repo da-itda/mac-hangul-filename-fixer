@@ -13,9 +13,9 @@
         "label": "main",
         "title": "한글본드",
         "width": 560,
-        "height": 500,
+        "height": 343,
         "minWidth": 500,
-        "minHeight": 420,
+        "minHeight": 180,
         "resizable": true,
         "visible": false
       }

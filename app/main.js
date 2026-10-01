@@ -2,6 +2,10 @@ const { invoke } = window.__TAURI__.core;
 const { open } = window.__TAURI__.dialog;
 const { listen } = window.__TAURI__.event;
 const updater = window.__TAURI__.updater;
+const appWindow = window.__TAURI__.window.getCurrentWindow();
+const { LogicalSize } = window.__TAURI__.dpi;
+
+const MAX_WINDOW_HEIGHT = 720;
 
 const selectedFolder = document.querySelector("#selected-folder");
 const chooseFolderButton = document.querySelector("#choose-folder");
@@ -28,6 +32,7 @@ const watchStatus = document.querySelector("#watch-status");
 const waitSummary = document.querySelector("#wait-summary");
 const folderCount = document.querySelector("#folder-count");
 const refreshLogsButton = document.querySelector("#refresh-logs");
+const tabsBar = document.querySelector(".tabs");
 const tabButtons = document.querySelectorAll("[data-tab]");
 const tabPanels = document.querySelectorAll("[data-panel]");
 const appVersion = document.querySelector("#app-version");
@@ -46,6 +51,8 @@ let folderPath = "";
 let lastTargets = [];
 let settings = defaultSettings();
 let progressHideTimer = null;
+let windowFitTimer = null;
+let windowFitQueue = Promise.resolve();
 
 chooseFolderButton.addEventListener("click", async () => {
   const selection = await open({
@@ -179,6 +186,7 @@ normalizeFolderButton.addEventListener("click", async () => {
   });
 });
 
+watchContentHeight();
 init();
 
 async function init() {
@@ -220,6 +228,51 @@ function showTab(tabName) {
 
   for (const panel of tabPanels) {
     panel.classList.toggle("active", panel.dataset.panel === tabName);
+  }
+
+  scheduleWindowFit();
+}
+
+// 탭 내용이 바뀌면 창 높이를 내용만큼 맞춘다. 최대 높이를 넘으면 패널 안에서 스크롤한다.
+function watchContentHeight() {
+  const observer = new ResizeObserver(scheduleWindowFit);
+  for (const panel of tabPanels) {
+    for (const child of panel.children) {
+      observer.observe(child);
+    }
+  }
+  scheduleWindowFit();
+}
+
+// requestAnimationFrame은 숨겨진 창에서 멈추므로 타이머로 모아서 실행한다.
+function scheduleWindowFit() {
+  clearTimeout(windowFitTimer);
+  windowFitTimer = setTimeout(() => {
+    // 크기 조절이 겹치지 않도록 순서대로 실행한다.
+    windowFitQueue = windowFitQueue.then(fitWindowToContent);
+  }, 16);
+}
+
+async function fitWindowToContent() {
+  const panel = document.querySelector(".tab-panel.active");
+  if (!panel) {
+    return;
+  }
+
+  const contentHeight = Math.min(MAX_WINDOW_HEIGHT, Math.ceil(tabsBar.offsetHeight + panel.scrollHeight));
+  if (contentHeight === window.innerHeight) {
+    return;
+  }
+
+  try {
+    // macOS에서는 Tauri 창 크기에 제목 표시줄이 포함되어 웹 화면보다 크다. 그 차이를 재서 더한다.
+    // 숨겨진 창에서는 window.innerWidth가 틀릴 수 있어 너비는 Tauri 값을 쓴다.
+    const scale = await appWindow.scaleFactor();
+    const windowSize = (await appWindow.innerSize()).toLogical(scale);
+    const chromeHeight = Math.max(0, Math.round(windowSize.height - window.innerHeight));
+    await appWindow.setSize(new LogicalSize(windowSize.width, contentHeight + chromeHeight));
+  } catch (error) {
+    console.warn("failed to fit window height", error);
   }
 }
 

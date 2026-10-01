@@ -8,6 +8,8 @@
   --text: #1d1d1f;
   --muted: #747479;
   --accent: #007aff;
+  --icon-muted: #8e8e93;
+  --icon-active: #3a3a3c;
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.08);
   color: #1d1d1f;
   background: var(--app-bg);
@@ -55,8 +57,8 @@ p {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 56px;
-  padding: 4px 18px 5px;
+  min-height: 64px;
+  padding: 8px 18px 9px;
   border-bottom: 1px solid var(--line);
   background: rgba(248, 248, 249, 0.92);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.64);
@@ -68,7 +70,7 @@ p {
   border: 0;
   border-radius: 8px;
   padding: 4px 4px 5px;
-  color: #6d6d72;
+  color: var(--icon-muted);
   background: transparent;
   font: inherit;
   font-size: 11px;
@@ -81,75 +83,66 @@ p {
 }
 
 .tab.active {
-  color: var(--accent);
-  background: #eef4ff;
-  box-shadow: var(--shadow-soft);
+  color: var(--icon-active);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Phosphor Light 아이콘: SVG를 마스크로 쓰고 글자색(currentColor)으로 칠한다. */
+.icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.icon-gear-six {
+  -webkit-mask-image: url("./icons/gear-six.svg");
+  mask-image: url("./icons/gear-six.svg");
+}
+
+.icon-folder-simple {
+  -webkit-mask-image: url("./icons/folder-simple.svg");
+  mask-image: url("./icons/folder-simple.svg");
+}
+
+.icon-clock-counter-clockwise {
+  -webkit-mask-image: url("./icons/clock-counter-clockwise.svg");
+  mask-image: url("./icons/clock-counter-clockwise.svg");
+}
+
+.icon-info {
+  -webkit-mask-image: url("./icons/info.svg");
+  mask-image: url("./icons/info.svg");
+}
+
+.icon-plus {
+  -webkit-mask-image: url("./icons/plus.svg");
+  mask-image: url("./icons/plus.svg");
+}
+
+.icon-minus {
+  -webkit-mask-image: url("./icons/minus.svg");
+  mask-image: url("./icons/minus.svg");
 }
 
 .tab-icon {
-  position: relative;
   display: block;
-  width: 23px;
-  height: 23px;
+  width: 24px;
+  height: 24px;
   margin: 0 auto 3px;
-  border-radius: 7px;
-  background: linear-gradient(#ffffff, #ececf0);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), var(--shadow-soft);
 }
 
-.tab-icon::before,
-.tab-icon::after {
-  position: absolute;
-  content: "";
-}
-
-.general-icon::before {
-  inset: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.folders-icon::before {
-  left: 5px;
-  top: 7px;
-  width: 13px;
-  height: 10px;
-  border-radius: 2px;
-  background: #f7c64b;
-  box-shadow: 0 -3px 0 -1px #efb83d;
-}
-
-.logs-icon::before {
-  left: 6px;
-  right: 6px;
-  top: 7px;
-  height: 2px;
-  background: var(--muted);
-  box-shadow: 0 5px 0 var(--muted), 0 10px 0 var(--muted);
-}
-
-.about-icon::before {
-  left: 10px;
-  top: 9px;
-  width: 3px;
-  height: 9px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
-.about-icon::after {
-  left: 9px;
-  top: 5px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
+/* 창 높이를 내용에 맞추기 위해 패널은 늘어나지 않고, 공간이 부족할 때만 줄어들며 스크롤한다. */
 .tab-panel {
   display: none;
   width: 100%;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   max-width: 470px;
   margin: 0 auto;
   padding: 16px 18px 18px;
@@ -174,24 +167,26 @@ h3 {
   font-weight: 600;
 }
 
-.hero-row {
+.app-header {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 11px;
   margin-bottom: 14px;
 }
 
-.brand-mark {
-  width: 58px;
-  height: 58px;
-  border-radius: 13px;
+.app-header-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
   object-fit: cover;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
 }
 
-.hero-row h2 {
-  margin-bottom: 4px;
-  font-size: 21px;
+.app-header h2 {
+  margin-bottom: 2px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .metrics {
@@ -202,8 +197,13 @@ h3 {
 }
 
 .metrics div {
-  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70px;
   padding: 9px 10px;
+  text-align: center;
   border-radius: 8px;
   background: var(--panel-bg);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.065), var(--shadow-soft);
@@ -484,15 +484,22 @@ input[type="radio"]:checked:disabled {
   border-color: #c8c8cb;
   border-radius: 0;
   background: #efeff1;
-  color: var(--text);
+  color: var(--icon-muted);
   font-size: 20px;
   font-weight: 400;
   line-height: 18px;
   box-shadow: none;
 }
 
+.control-button .icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0 auto;
+}
+
 .control-button:disabled {
-  color: #b5b5b8;
+  color: #c7c7cc;
   background: #efeff1;
 }
 
@@ -648,32 +655,8 @@ progress::-webkit-progress-value {
   font-weight: 600;
 }
 
-.about-panel {
-  text-align: center;
-  padding-top: 30px;
-}
-
-.about-logo {
-  width: 94px;
-  height: 94px;
-  margin-bottom: 15px;
-  border-radius: 21px;
-  object-fit: cover;
-  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.16);
-}
-
-.about-panel h2 {
-  margin-bottom: 7px;
-  font-size: 19px;
-}
-
-.about-panel p + p {
-  margin-top: 10px;
-}
-
 .about-details {
-  margin-top: 18px;
-  text-align: left;
+  margin-top: 12px;
 }
 
 .about-details .setting-row {

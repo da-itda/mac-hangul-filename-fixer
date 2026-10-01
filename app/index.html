@@ -10,29 +10,29 @@
     <main class="settings-window">
       <nav class="tabs" aria-label="설정 탭">
         <button class="tab active" type="button" data-tab="general">
-          <span class="tab-icon general-icon" aria-hidden="true"></span>
+          <span class="icon tab-icon icon-gear-six" aria-hidden="true"></span>
           일반
         </button>
         <button class="tab" type="button" data-tab="folders">
-          <span class="tab-icon folders-icon" aria-hidden="true"></span>
+          <span class="icon tab-icon icon-folder-simple" aria-hidden="true"></span>
           폴더
         </button>
         <button class="tab" type="button" data-tab="logs">
-          <span class="tab-icon logs-icon" aria-hidden="true"></span>
+          <span class="icon tab-icon icon-clock-counter-clockwise" aria-hidden="true"></span>
           로그
         </button>
         <button class="tab" type="button" data-tab="about">
-          <span class="tab-icon about-icon" aria-hidden="true"></span>
+          <span class="icon tab-icon icon-info" aria-hidden="true"></span>
           정보
         </button>
       </nav>
 
       <section class="tab-panel active" data-panel="general">
-        <div class="hero-row">
-          <img class="brand-mark" src="./hangulbond_img.png" alt="" />
+        <div class="app-header">
+          <img class="app-header-icon" src="./hangulbond_img.png" alt="" />
           <div>
-            <h2>한글본드</h2>
-            <p>자소 분리된 한글 파일명과 폴더명을 조용히 붙여 정리합니다.</p>
+            <h2>한글본드(NFD to NFC)</h2>
+            <p>자동 감시해서, 자소 분리된 한글명을 조용히 빠르게 정리</p>
           </div>
         </div>
 
@@ -84,8 +84,12 @@
             <li>저장된 폴더가 없습니다.</li>
           </ul>
           <div class="table-controls" aria-label="감시 폴더 관리">
-            <button id="choose-folder" class="control-button" type="button" aria-label="폴더 추가">+</button>
-            <button id="remove-selected-folder" class="control-button" type="button" aria-label="선택 폴더 삭제" disabled>-</button>
+            <button id="choose-folder" class="control-button" type="button" aria-label="폴더 추가">
+              <span class="icon icon-plus" aria-hidden="true"></span>
+            </button>
+            <button id="remove-selected-folder" class="control-button" type="button" aria-label="선택 폴더 삭제" disabled>
+              <span class="icon icon-minus" aria-hidden="true"></span>
+            </button>
           </div>
         </div>
 
@@ -155,10 +159,14 @@
       </section>
 
       <section class="tab-panel about-panel" data-panel="about">
-        <img class="about-logo" src="./hangulbond_img.png" alt="" />
-        <h2>한글본드</h2>
-        <p id="app-version">Version 0.1.0</p>
-        <p>파일 내용은 변경하지 않고, 파일명과 폴더명만 NFC 형태로 정리합니다.</p>
+        <div class="app-header">
+          <img class="app-header-icon" src="./hangulbond_img.png" alt="" />
+          <div>
+            <h2>한글본드(NFD to NFC)</h2>
+            <p id="app-version">Version 0.1.0</p>
+          </div>
+        </div>
+        <p class="about-note">파일 내용은 변경하지 않고, 파일명과 폴더명만 NFC 형태로 정리합니다.</p>
 
         <div class="settings-group about-details">
           <div class="setting-row">
