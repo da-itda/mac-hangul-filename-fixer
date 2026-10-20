@@ -51,3 +51,5 @@
 - [사용·릴리스 문서 목록](docs/README.md)
 - [릴리스 기록](docs/RELEASE_HISTORY.md)
 - 구현: Tauri 2, Rust, JavaScript
+
+소스에서 실행하려면 Node.js 20 이상과 Rust를 준비한 뒤 저장소 루트에서 `npm install`과 `npm run dev`를 실행하세요. 테스트는 `npm test`와 `npm run test:rust`로 실행할 수 있습니다.
