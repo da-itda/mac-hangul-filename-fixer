@@ -35,24 +35,24 @@
 
 ## 실행 방법
 
-macOS debug 앱 위치:
+저장소 루트에서 실행하며, macOS debug 앱 경로는 다음과 같다.
 
 ```text
-$PROJECT_ROOT/src-tauri/target/debug/bundle/macos/한글본드.app
+src-tauri/target/debug/bundle/macos/한글본드.app
 ```
 
 터미널에서 실행:
 
 ```sh
-open "$PROJECT_ROOT/src-tauri/target/debug/bundle/macos/한글본드.app"
+open "src-tauri/target/debug/bundle/macos/한글본드.app"
 ```
 
 ## 안전한 테스트 폴더
 
-테스트용 샌드박스 폴더:
+테스트용 샌드박스 폴더를 저장소 루트에서 만든다.
 
 ```text
-$PROJECT_ROOT/tmp/manual-test-fixture
+tmp/manual-test-fixture
 ```
 
 이 폴더에는 자소 분리된 파일명과 폴더명이 들어 있다. 앱에서 이 폴더를 선택해 테스트한다.
@@ -98,8 +98,10 @@ test_한글.docx → test_한글.docx
 macOS 로그 파일 예상 위치:
 
 ```text
-~/Library/Application Support/com.codex.hangul-nfc-normalizer/activity.jsonl
+~/Library/Application Support/com.hangulbond.desktop/activity.jsonl
 ```
+
+설치된 이전 앱의 데이터를 마이그레이션하기 전에는 기존 식별자 폴더에 로그가 남아 있을 수 있다.
 
 로그는 JSONL 형식으로 저장된다.
 
@@ -112,7 +114,8 @@ macOS 로그 파일 예상 위치:
 5. 터미널에서 테스트 폴더 안에 NFD 파일을 만든다.
 
 ```sh
-printf "auto watch test\n" > "$PROJECT_ROOT/tmp/manual-test-fixture/자동감시.txt"
+mkdir -p tmp/manual-test-fixture
+printf "auto watch test\n" > "$PWD/tmp/manual-test-fixture/자동감시.txt"
 ```
 
 6. 약 3-8초 기다린다. 파일 이벤트를 받으면 debounce 후 처리하고, 이벤트를 놓쳐도 보정 스캔으로 처리한다.
@@ -136,7 +139,9 @@ printf "auto watch test\n" > "$PROJECT_ROOT/tmp/manual-test-fixture/자도
 macOS 설정 파일 예상 위치:
 
 ```text
-~/Library/Application Support/com.codex.hangul-nfc-normalizer/settings.json
+~/Library/Application Support/com.hangulbond.desktop/settings.json
 ```
+
+설치된 이전 앱의 설정을 마이그레이션하기 전에는 기존 식별자 폴더에 설정이 남아 있을 수 있다.
 
 설정은 JSON 형식으로 저장된다.
