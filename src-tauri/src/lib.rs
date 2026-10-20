@@ -8,15 +8,16 @@ mod watcher;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 
 #[cfg(unix)]
 use std::os::fd::AsRawFd;
 
 use logs::{append_rename_results, read_recent_logs, LogEntry};
 use scanner::{
-    normalize_directory_with_progress, scan_directory, NormalizeOptions, NormalizeProgress,
-    RenameResult, ScanTarget,
+    normalize_directory_with_progress, normalize_selected_targets, scan_directory_interruptible,
+    NormalizeOptions, NormalizeOutcome, NormalizeProgress, RenameResult, ScanOutcome, ScanTarget,
 };
 use settings::{load_settings_from_file, save_settings_to_file, AppSettings};
 use tauri::{
@@ -44,6 +45,7 @@ const LEGACY_AUTOSTART_MARKERS: &[&str] = &[
 struct AppState {
     watch_service: Mutex<WatchService>,
     instance_lock: Mutex<Option<fs::File>>,
+    manual_operation: Mutex<Option<Arc<AtomicBool>>>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -65,41 +67,164 @@ struct NormalizeProgressEvent {
 }
 
 #[tauri::command]
-fn scan_folder(path: String, recursive: Option<bool>) -> Result<Vec<ScanTarget>, String> {
-    scan_directory(PathBuf::from(path).as_path(), recursive.unwrap_or(true))
-}
-
-#[tauri::command]
-async fn normalize_folder(
+async fn scan_folder(
     app: AppHandle,
     path: String,
     recursive: Option<bool>,
-    dry_run: Option<bool>,
-    stabilization_wait_ms: Option<u64>,
-) -> Result<Vec<RenameResult>, String> {
-    let should_log = !dry_run.unwrap_or(false);
+) -> Result<ScanOutcome, String> {
+    let cancel = begin_manual_operation(&app)?;
     let root_path = PathBuf::from(path);
+    let recursive = recursive.unwrap_or(true);
+    let app_for_worker = app.clone();
+    let cancel_for_worker = cancel.clone();
+    emit_normalize_progress(
+        &app,
+        "scan",
+        NormalizeProgress {
+            phase: "scanning".to_string(),
+            completed: 0,
+            total: 0,
+            current_name: None,
+            final_name: None,
+            status: None,
+            reason: None,
+        },
+    );
+
+    let worker_result = async_runtime::spawn_blocking(move || {
+        let outcome =
+            scan_directory_interruptible(&root_path, recursive, &cancel_for_worker, |scanned| {
+                emit_normalize_progress(
+                    &app_for_worker,
+                    "scan",
+                    NormalizeProgress {
+                        phase: "scanning".to_string(),
+                        completed: scanned,
+                        total: 0,
+                        current_name: None,
+                        final_name: None,
+                        status: None,
+                        reason: None,
+                    },
+                );
+            })?;
+        emit_normalize_progress(
+            &app_for_worker,
+            "scan",
+            NormalizeProgress {
+                phase: if outcome.cancelled {
+                    "cancelled"
+                } else {
+                    "scan-completed"
+                }
+                .to_string(),
+                completed: outcome.scanned_entries,
+                total: 0,
+                current_name: None,
+                final_name: None,
+                status: None,
+                reason: None,
+            },
+        );
+        Ok::<ScanOutcome, String>(outcome)
+    })
+    .await;
+    finish_manual_operation(&app, &cancel);
+    worker_result.map_err(|error| format!("scan worker failed: {error}"))?
+}
+
+#[tauri::command]
+async fn normalize_selected_folder_items(
+    app: AppHandle,
+    path: String,
+    recursive: Option<bool>,
+    selected_targets: Vec<ScanTarget>,
+    stabilization_wait_ms: Option<u64>,
+) -> Result<NormalizeOutcome, String> {
+    let log_path = log_file_path(&app)?;
+    let cancel = begin_manual_operation(&app)?;
+    let root_path = PathBuf::from(path);
+    let selected_paths = selected_targets
+        .into_iter()
+        .map(|target| target.path)
+        .collect::<Vec<_>>();
     let options = NormalizeOptions {
         recursive: recursive.unwrap_or(true),
-        dry_run: dry_run.unwrap_or(false),
+        dry_run: false,
         stabilization_wait_ms: stabilization_wait_ms.unwrap_or(3_000),
     };
-    let log_path = log_file_path(&app)?;
     let app_for_worker = app.clone();
+    let cancel_for_worker = cancel.clone();
+    emit_normalize_progress(
+        &app,
+        "normalize",
+        NormalizeProgress {
+            phase: "preparing".to_string(),
+            completed: 0,
+            total: 0,
+            current_name: None,
+            final_name: None,
+            status: None,
+            reason: None,
+        },
+    );
 
-    async_runtime::spawn_blocking(move || {
-        let results = normalize_directory_with_progress(&root_path, options, |progress| {
-            emit_normalize_progress(&app_for_worker, "folder", progress);
-        })?;
-
-        if should_log {
-            append_rename_results(&log_path, &results)?;
-        }
-
-        Ok(results)
+    let worker_result = async_runtime::spawn_blocking(move || {
+        let outcome = normalize_selected_targets(
+            &root_path,
+            options.recursive,
+            &selected_paths,
+            options,
+            &cancel_for_worker,
+            |progress| emit_normalize_progress(&app_for_worker, "normalize", progress),
+        )?;
+        append_rename_results(&log_path, &outcome.results)?;
+        Ok::<NormalizeOutcome, String>(outcome)
     })
-    .await
-    .map_err(|error| format!("normalization worker failed: {error}"))?
+    .await;
+    finish_manual_operation(&app, &cancel);
+    worker_result.map_err(|error| format!("normalization worker failed: {error}"))?
+}
+
+#[tauri::command]
+fn cancel_manual_operation(app: AppHandle) -> Result<bool, String> {
+    let state = app.state::<AppState>();
+    let active = state
+        .manual_operation
+        .lock()
+        .map_err(|_| "failed to lock manual operation".to_string())?;
+    if let Some(cancel) = active.as_ref() {
+        cancel.store(true, Ordering::Relaxed);
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+fn begin_manual_operation(app: &AppHandle) -> Result<Arc<AtomicBool>, String> {
+    let state = app.state::<AppState>();
+    let mut active = state
+        .manual_operation
+        .lock()
+        .map_err(|_| "failed to lock manual operation".to_string())?;
+    if active.is_some() {
+        return Err("이미 검사 또는 정리 작업이 진행 중입니다.".to_string());
+    }
+
+    let cancel = Arc::new(AtomicBool::new(false));
+    *active = Some(cancel.clone());
+    Ok(cancel)
+}
+
+fn finish_manual_operation(app: &AppHandle, completed: &Arc<AtomicBool>) {
+    if let Ok(mut active) = app.state::<AppState>().manual_operation.lock() {
+        if active
+            .as_ref()
+            .is_some_and(|current| Arc::ptr_eq(current, completed))
+        {
+            *active = None;
+        }
+    }
 }
 
 #[tauri::command]
@@ -545,6 +670,7 @@ pub fn run() {
         .manage(AppState {
             watch_service: Mutex::new(WatchService::new()),
             instance_lock: Mutex::new(None),
+            manual_operation: Mutex::new(None),
         })
         .plugin(
             tauri_plugin_autostart::Builder::new()
@@ -661,7 +787,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             scan_folder,
-            normalize_folder,
+            normalize_selected_folder_items,
+            cancel_manual_operation,
             recent_logs,
             load_settings,
             save_settings,

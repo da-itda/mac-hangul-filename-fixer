@@ -544,6 +544,19 @@ input[type="radio"]:checked:disabled {
   font-weight: 500;
 }
 
+.progress-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-button {
+  min-height: 23px;
+  padding: 0 9px;
+  color: #9d2929;
+  background: #f7e9e9;
+}
+
 #progress-count {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -589,6 +602,51 @@ progress::-webkit-progress-value {
   display: block;
 }
 
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.result-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.selection-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.selection-controls button {
+  min-height: 23px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.selection-hint {
+  margin: 0 0 7px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.show-more-button {
+  display: block;
+  margin: 7px auto 0;
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.show-more-button[hidden] {
+  display: none;
+}
+
 .logs {
   overflow: hidden;
   margin: 0;
@@ -608,6 +666,42 @@ progress::-webkit-progress-value {
 
 .logs li + li {
   border-top: 1px solid var(--line-soft);
+}
+
+.target-row {
+  padding: 0 !important;
+}
+
+.target-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.target-check input {
+  margin-top: 2px;
+}
+
+.target-description {
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.target-change,
+.target-parent {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.target-parent {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .log-row {

@@ -14,6 +14,7 @@ const scanFolderButton = document.querySelector("#scan-folder");
 const normalizeFolderButton = document.querySelector("#normalize-folder");
 const message = document.querySelector("#message");
 const targetsList = document.querySelector("#targets");
+const showMoreTargetsButton = document.querySelector("#show-more-targets");
 const resultBox = document.querySelector(".result-box");
 const logsList = document.querySelector("#logs");
 const batchProgress = document.querySelector("#batch-progress");
@@ -21,6 +22,10 @@ const progressTitle = document.querySelector("#progress-title");
 const progressCount = document.querySelector("#progress-count");
 const progressBar = document.querySelector("#progress-bar");
 const progressDetail = document.querySelector("#progress-detail");
+const cancelOperationButton = document.querySelector("#cancel-operation");
+const selectAllTargetsButton = document.querySelector("#select-all-targets");
+const clearTargetSelectionButton = document.querySelector("#clear-target-selection");
+const selectedTargetCount = document.querySelector("#selected-target-count");
 const folderList = document.querySelector("#folder-list");
 const waitTimeSelect = document.querySelector("#wait-time");
 const defaultRecursiveInput = document.querySelector("#default-recursive");
@@ -49,6 +54,11 @@ const updateProgressDetail = document.querySelector("#update-progress-detail");
 
 let folderPath = "";
 let lastTargets = [];
+let selectedTargetIndices = new Set();
+let manualOperationBusy = false;
+let resultMode = "targets";
+let visibleResultCount = 100;
+let lastResults = [];
 let settings = defaultSettings();
 let progressHideTimer = null;
 let windowFitTimer = null;
@@ -148,42 +158,108 @@ scanFolderButton.addEventListener("click", async () => {
 
   await runWithBusyState(scanFolderButton, "검사 중", async () => {
     hideProgress();
-    lastTargets = await invoke("scan_folder", {
+    const outcome = await invoke("scan_folder", {
       path: folderPath,
       recursive: currentFolder()?.recursive ?? settings.defaultRecursive
     });
+    lastTargets = outcome.targets ?? [];
+    selectedTargetIndices = new Set(lastTargets.map((_, index) => index));
 
     setResultBoxVisible(true);
-    renderTargets(lastTargets);
-    normalizeFolderButton.disabled = lastTargets.length === 0;
-    message.textContent = lastTargets.length === 0
+    renderTargets();
+    normalizeFolderButton.disabled = selectedTargetIndices.size === 0;
+    message.textContent = outcome.cancelled
+      ? `검사를 중단했습니다. 확인된 ${lastTargets.length}개 항목을 선택할 수 있습니다.`
+      : lastTargets.length === 0
       ? "정리할 파일명이나 폴더명이 없습니다."
       : `${lastTargets.length}개 항목을 정리할 수 있습니다.`;
   });
 });
 
 normalizeFolderButton.addEventListener("click", async () => {
-  if (!folderPath) {
+  if (!folderPath || selectedTargetIndices.size === 0) {
     return;
   }
 
   await runWithBusyState(normalizeFolderButton, "정리 중", async () => {
-    showProgress("정리 준비 중", 0, lastTargets.length);
-    const results = await invoke("normalize_folder", {
+    const selectedTargets = [...selectedTargetIndices]
+      .sort((left, right) => left - right)
+      .map((index) => lastTargets[index]);
+    showProgress("백그라운드 정리 중", 0, selectedTargets.length);
+    progressDetail.textContent = "다른 탭을 이용해도 작업은 계속됩니다. 필요하면 중단할 수 있습니다.";
+    const outcome = await invoke("normalize_selected_folder_items", {
       path: folderPath,
       recursive: currentFolder()?.recursive ?? settings.defaultRecursive,
-      dryRun: false,
+      selectedTargets,
       stabilizationWaitMs: settings.stabilizationWaitMs
     });
 
     setResultBoxVisible(true);
-    renderResults(results);
+    renderResults(outcome.results ?? []);
     await loadRecentLogs();
     lastTargets = [];
+    selectedTargetIndices.clear();
+    updateTargetSelectionControls();
     normalizeFolderButton.disabled = true;
-    message.textContent = `${results.length}개 항목 처리 결과를 기록했습니다.`;
+    message.textContent = outcome.cancelled
+      ? `정리를 중단했습니다. ${outcome.results?.length ?? 0}개 항목까지 처리했습니다.`
+      : `${outcome.results?.length ?? 0}개 선택 항목을 처리했습니다.`;
     hideProgressSoon();
   });
+});
+
+cancelOperationButton.addEventListener("click", async () => {
+  cancelOperationButton.disabled = true;
+  progressDetail.textContent = "현재 항목을 마친 뒤 안전하게 중단합니다.";
+  try {
+    await invoke("cancel_manual_operation");
+  } catch (error) {
+    progressDetail.textContent = `중단 요청 실패: ${error}`;
+    cancelOperationButton.disabled = false;
+  }
+});
+
+selectAllTargetsButton.addEventListener("click", () => {
+  selectedTargetIndices = new Set(lastTargets.map((_, index) => index));
+  renderTargets();
+});
+
+clearTargetSelectionButton.addEventListener("click", () => {
+  selectedTargetIndices.clear();
+  renderTargets();
+});
+
+targetsList.addEventListener("change", (event) => {
+  const checkbox = event.target.closest("input[data-target-index]");
+  if (!checkbox) {
+    return;
+  }
+  const index = Number(checkbox.dataset.targetIndex);
+  const target = lastTargets[index];
+  if (checkbox.checked) {
+    selectedTargetIndices.add(index);
+  } else {
+    selectedTargetIndices.delete(index);
+  }
+  if (target?.kind === "directory") {
+    lastTargets.forEach((candidate, candidateIndex) => {
+      if (candidateIndex === index || isPathWithin(candidate.path, target.path)) {
+        if (checkbox.checked) {
+          selectedTargetIndices.add(candidateIndex);
+        } else {
+          selectedTargetIndices.delete(candidateIndex);
+        }
+      }
+    });
+    renderTargets();
+    return;
+  }
+  updateTargetSelectionControls();
+});
+
+showMoreTargetsButton.addEventListener("click", () => {
+  visibleResultCount += 100;
+  renderCurrentResults();
 });
 
 watchContentHeight();
@@ -458,6 +534,7 @@ folderList.addEventListener("click", async (event) => {
 function selectFolder(path, options = {}) {
   folderPath = path;
   lastTargets = [];
+  selectedTargetIndices.clear();
   selectedFolder.textContent = folderPath;
   scanFolderButton.disabled = false;
   normalizeFolderButton.disabled = true;
@@ -552,18 +629,22 @@ function setResultBoxVisible(visible) {
 
 async function runWithBusyState(button, busyText, callback) {
   const originalText = button.textContent;
+  manualOperationBusy = true;
   setButtonsDisabled(true);
   button.textContent = busyText;
+  cancelOperationButton.disabled = false;
 
   try {
     await callback();
   } catch (error) {
     message.textContent = `오류: ${error}`;
   } finally {
+    manualOperationBusy = false;
     button.textContent = originalText;
     setButtonsDisabled(false);
     scanFolderButton.disabled = !folderPath;
-    normalizeFolderButton.disabled = lastTargets.length === 0;
+    updateTargetSelectionControls();
+    cancelOperationButton.disabled = true;
     renderSelectedFolderControls();
   }
 }
@@ -576,18 +657,40 @@ function renderProgressEvent(payload) {
   const total = Number(payload.total) || 0;
   const completed = Number(payload.completed) || 0;
 
+  if (payload.phase === "scanning") {
+    showProgress("백그라운드 검사 중", completed, 0);
+    progressCount.textContent = `${completed}개 확인`;
+    progressDetail.textContent = "다른 탭을 이용해도 검사는 계속됩니다.";
+    return;
+  }
+
+  if (payload.phase === "preparing") {
+    showProgress("정리 대상 확인 중", completed, 0);
+    progressCount.textContent = `${completed}개 확인`;
+    progressDetail.textContent = "선택 항목을 확인하고 있습니다. 다른 탭을 이용할 수 있습니다.";
+    return;
+  }
+
+  if (payload.phase === "scan-completed") {
+    showProgress("검사 완료", completed, 0);
+    progressCount.textContent = `${completed}개 확인`;
+    progressDetail.textContent = "검사 결과에서 정리할 파일이나 폴더를 선택하세요.";
+    cancelOperationButton.disabled = true;
+    hideProgressSoon(1600);
+    return;
+  }
+
   if (payload.phase === "started") {
-    showTab("folders");
     setButtonsDisabled(true);
-    showProgress(total === 0 ? "정리할 항목 없음" : "정리 중", completed, total);
+    showProgress(total === 0 ? "정리할 항목 없음" : "백그라운드 정리 중", completed, total);
     progressDetail.textContent = total === 0
       ? "정리할 파일명이나 폴더명이 없습니다."
-      : "항목을 하나씩 확인하고 있습니다.";
+      : "다른 탭을 이용해도 작업은 계속됩니다.";
     return;
   }
 
   if (payload.phase === "item") {
-    showProgress("정리 중", completed, total);
+    showProgress("백그라운드 정리 중", completed, total);
     const currentName = payload.currentName ?? "";
     const finalName = payload.finalName ?? "";
     const status = statusLabel(payload.status);
@@ -606,6 +709,17 @@ function renderProgressEvent(payload) {
       ? "정리할 항목이 없습니다."
       : "모든 항목 처리가 끝났습니다.";
     hideProgressSoon();
+    cancelOperationButton.disabled = true;
+    return;
+  }
+
+  if (payload.phase === "cancelled") {
+    showProgress("중단됨", completed, total);
+    progressDetail.textContent = payload.scope === "scan"
+      ? "확인된 항목만 표시합니다. 선택한 항목을 정리할 수 있습니다."
+      : "현재까지 처리한 항목을 저장했습니다.";
+    cancelOperationButton.disabled = true;
+    hideProgressSoon(5000);
   }
 }
 
@@ -631,8 +745,10 @@ function hideProgressSoon(delay = 700) {
 
   progressHideTimer = setTimeout(() => {
     hideProgress();
-    setButtonsDisabled(false);
-    renderSelectedFolderControls();
+    if (!manualOperationBusy) {
+      setButtonsDisabled(false);
+      renderSelectedFolderControls();
+    }
   }, delay);
 }
 
@@ -673,40 +789,99 @@ function setButtonsDisabled(disabled) {
   chooseFolderButton.disabled = disabled;
   removeSelectedFolderButton.disabled = disabled || !folderPath;
   scanFolderButton.disabled = disabled;
-  normalizeFolderButton.disabled = disabled;
-  waitTimeSelect.disabled = disabled;
-  defaultRecursiveInput.disabled = disabled;
-  selectedFolderEnabledInput.disabled = disabled || !folderPath;
+  normalizeFolderButton.disabled = disabled || selectedTargetIndices.size === 0;
+  selectAllTargetsButton.disabled = disabled || lastTargets.length === 0 || selectedTargetIndices.size === lastTargets.length;
+  clearTargetSelectionButton.disabled = disabled || selectedTargetIndices.size === 0;
   selectedFolderRecursiveInput.disabled = disabled || !folderPath;
-  autoWatchInput.disabled = disabled;
-  launchAtLoginInput.disabled = disabled;
+  for (const checkbox of targetsList.querySelectorAll("input[data-target-index]")) {
+    checkbox.disabled = disabled;
+  }
 }
 
 function renderTargets(targets) {
-  if (targets.length === 0) {
+  if (targets) {
+    lastTargets = targets;
+    selectedTargetIndices = new Set(lastTargets.map((_, index) => index));
+    resultMode = "targets";
+    visibleResultCount = 100;
+  }
+
+  if (lastTargets.length === 0) {
     targetsList.innerHTML = "<li>정리할 항목이 없습니다.</li>";
+    showMoreTargetsButton.hidden = true;
+    updateTargetSelectionControls();
     return;
   }
 
-  targetsList.innerHTML = targets.map((target) => {
-    const status = target.collision ? "충돌 처리" : "변환 예정";
-    return `<li>${escapeHtml(status)}: ${escapeHtml(target.originalName)} → ${escapeHtml(target.finalName)}</li>`;
+  renderCurrentResults();
+  updateTargetSelectionControls();
+}
+
+function renderCurrentResults() {
+  if (resultMode === "results") {
+    renderResultRows();
+    return;
+  }
+
+  targetsList.innerHTML = lastTargets.slice(0, visibleResultCount).map((target, index) => {
+    const status = target.collision ? "충돌" : "변환";
+    const kind = target.kind === "directory" ? "폴더" : "파일";
+    const parent = target.parentPath ?? "";
+    const checked = selectedTargetIndices.has(index) ? "checked" : "";
+    return `<li class="target-row">
+      <label class="target-check"><input type="checkbox" data-target-index="${index}" ${checked} />
+        <span class="target-description"><span class="target-change">${escapeHtml(kind)} · ${escapeHtml(status)}: ${escapeHtml(target.originalName)} → ${escapeHtml(target.finalName)}</span>
+        <span class="target-parent" title="${escapeHtml(parent)}">${escapeHtml(parent)}</span></span>
+      </label>
+    </li>`;
   }).join("");
+  showMoreTargetsButton.hidden = visibleResultCount >= lastTargets.length;
+  showMoreTargetsButton.textContent = `다음 ${Math.min(100, lastTargets.length - visibleResultCount)}개 표시 (${Math.min(visibleResultCount, lastTargets.length)} / ${lastTargets.length})`;
+}
+
+function updateTargetSelectionControls() {
+  selectedTargetCount.textContent = `${selectedTargetIndices.size}개 선택`;
+  selectAllTargetsButton.disabled = manualOperationBusy || lastTargets.length === 0 || selectedTargetIndices.size === lastTargets.length;
+  clearTargetSelectionButton.disabled = manualOperationBusy || selectedTargetIndices.size === 0;
+  normalizeFolderButton.disabled = manualOperationBusy || selectedTargetIndices.size === 0;
+}
+
+function isPathWithin(candidatePath, directoryPath) {
+  const candidate = String(candidatePath ?? "");
+  const directory = String(directoryPath ?? "");
+  if (!candidate || !directory) {
+    return false;
+  }
+  const separator = directory.includes("\\") && !directory.includes("/") ? "\\" : "/";
+  const prefix = directory.endsWith(separator) ? directory : `${directory}${separator}`;
+  return candidate.startsWith(prefix);
 }
 
 function renderResults(results) {
   setResultBoxVisible(true);
+  lastTargets = [];
+  selectedTargetIndices.clear();
+  lastResults = results;
+  resultMode = "results";
+  visibleResultCount = 100;
+  renderResultRows();
+  updateTargetSelectionControls();
+}
 
-  if (results.length === 0) {
+function renderResultRows() {
+  if (lastResults.length === 0) {
     targetsList.innerHTML = "<li>처리한 항목이 없습니다.</li>";
+    showMoreTargetsButton.hidden = true;
     return;
   }
 
-  targetsList.innerHTML = results.map((result) => {
+  targetsList.innerHTML = lastResults.slice(0, visibleResultCount).map((result) => {
     const status = statusLabel(result.status);
     const detail = result.reason ? ` (${result.reason})` : "";
     return `<li>${escapeHtml(status)}: ${escapeHtml(result.originalName)} → ${escapeHtml(result.finalName)}${escapeHtml(detail)}</li>`;
   }).join("");
+  showMoreTargetsButton.hidden = visibleResultCount >= lastResults.length;
+  showMoreTargetsButton.textContent = `다음 ${Math.min(100, lastResults.length - visibleResultCount)}개 표시 (${Math.min(visibleResultCount, lastResults.length)} / ${lastResults.length})`;
 }
 
 function renderLogs(logs) {

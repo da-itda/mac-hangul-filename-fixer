@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
 
 use serde::Serialize;
 
@@ -11,7 +13,7 @@ use crate::stabilization::{wait_for_stable_path, StabilityOptions, StabilityStat
 
 const EXCLUDED_DIRECTORY_NAMES: &[&str] = &[".git", "node_modules"];
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanTarget {
     pub kind: String,
@@ -55,10 +57,125 @@ pub struct NormalizeOptions {
     pub stabilization_wait_ms: u64,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanOutcome {
+    pub targets: Vec<ScanTarget>,
+    pub cancelled: bool,
+    pub scanned_entries: usize,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NormalizeOutcome {
+    pub results: Vec<RenameResult>,
+    pub cancelled: bool,
+}
+
 pub fn scan_directory(root_path: &Path, recursive: bool) -> Result<Vec<ScanTarget>, String> {
+    let cancel = AtomicBool::new(false);
+    Ok(scan_directory_interruptible(root_path, recursive, &cancel, |_| {})?.targets)
+}
+
+pub fn scan_directory_interruptible<F>(
+    root_path: &Path,
+    recursive: bool,
+    cancel: &AtomicBool,
+    mut on_progress: F,
+) -> Result<ScanOutcome, String>
+where
+    F: FnMut(usize),
+{
     let mut targets = Vec::new();
-    walk_directory(root_path, recursive, &mut targets)?;
-    Ok(targets)
+    let mut scanned_entries = 0;
+    walk_directory(
+        root_path,
+        recursive,
+        &mut targets,
+        cancel,
+        &mut scanned_entries,
+        &mut on_progress,
+    )?;
+    Ok(ScanOutcome {
+        targets,
+        cancelled: cancel.load(Ordering::Relaxed),
+        scanned_entries,
+    })
+}
+
+pub fn normalize_selected_targets<F>(
+    root_path: &Path,
+    recursive: bool,
+    selected_paths: &[PathBuf],
+    options: NormalizeOptions,
+    cancel: &AtomicBool,
+    mut on_progress: F,
+) -> Result<NormalizeOutcome, String>
+where
+    F: FnMut(NormalizeProgress),
+{
+    let selected = selected_paths.iter().cloned().collect::<HashSet<_>>();
+    let scan = scan_directory_interruptible(root_path, recursive, cancel, |scanned| {
+        on_progress(NormalizeProgress {
+            phase: "preparing".to_string(),
+            completed: scanned,
+            total: 0,
+            current_name: None,
+            final_name: None,
+            status: None,
+            reason: None,
+        });
+    })?;
+    let targets = scan
+        .targets
+        .into_iter()
+        .filter(|target| selected.contains(&target.path))
+        .collect::<Vec<_>>();
+    let total = targets.len();
+    let mut results = Vec::with_capacity(total);
+
+    on_progress(NormalizeProgress {
+        phase: "started".to_string(),
+        completed: 0,
+        total,
+        current_name: None,
+        final_name: None,
+        status: None,
+        reason: None,
+    });
+
+    for target in targets {
+        if cancel.load(Ordering::Relaxed) {
+            break;
+        }
+
+        let result = apply_rename_target(&target, options.stabilization_wait_ms);
+        let completed = results.len() + 1;
+        on_progress(NormalizeProgress {
+            phase: "item".to_string(),
+            completed,
+            total,
+            current_name: Some(result.original_name.clone()),
+            final_name: Some(result.final_name.clone()),
+            status: Some(result.status.clone()),
+            reason: result.reason.clone(),
+        });
+        results.push(result);
+        thread::yield_now();
+    }
+
+    let cancelled = cancel.load(Ordering::Relaxed);
+    on_progress(NormalizeProgress {
+        phase: if cancelled { "cancelled" } else { "completed" }.to_string(),
+        completed: results.len(),
+        total,
+        current_name: None,
+        final_name: None,
+        status: None,
+        reason: None,
+    });
+
+    Ok(NormalizeOutcome { results, cancelled })
 }
 
 pub fn normalize_path(path: &Path, options: NormalizeOptions) -> Result<Vec<RenameResult>, String> {
@@ -216,16 +333,30 @@ fn walk_directory(
     directory_path: &Path,
     recursive: bool,
     targets: &mut Vec<ScanTarget>,
+    cancel: &AtomicBool,
+    scanned_entries: &mut usize,
+    on_progress: &mut impl FnMut(usize),
 ) -> Result<(), String> {
-    let entries = fs::read_dir(directory_path)
-        .map_err(|error| format!("failed to read {}: {error}", directory_path.display()))?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| {
+    let read_dir = fs::read_dir(directory_path)
+        .map_err(|error| format!("failed to read {}: {error}", directory_path.display()))?;
+    let mut entries = Vec::new();
+    for entry in read_dir {
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+        let entry = entry.map_err(|error| {
             format!(
                 "failed to read entry in {}: {error}",
                 directory_path.display()
             )
         })?;
+        *scanned_entries += 1;
+        if *scanned_entries % 64 == 0 {
+            on_progress(*scanned_entries);
+            thread::yield_now();
+        }
+        entries.push(entry);
+    }
 
     let mut reserved_names: HashSet<String> = entries
         .iter()
@@ -233,6 +364,10 @@ fn walk_directory(
         .collect();
 
     for entry in entries {
+        if cancel.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+
         let file_type = entry
             .file_type()
             .map_err(|error| format!("failed to inspect {}: {error}", entry.path().display()))?;
@@ -247,7 +382,14 @@ fn walk_directory(
         };
 
         if file_type.is_dir() && recursive && !is_excluded_directory_name(&file_name) {
-            walk_directory(&entry.path(), recursive, targets)?;
+            walk_directory(
+                &entry.path(),
+                recursive,
+                targets,
+                cancel,
+                scanned_entries,
+                on_progress,
+            )?;
         }
 
         if !file_type.is_file() && !file_type.is_dir() {

@@ -126,7 +126,10 @@
         <div id="batch-progress" class="batch-progress" hidden>
           <div class="progress-head">
             <span id="progress-title">정리 중</span>
-            <span id="progress-count">0 / 0</span>
+            <span class="progress-actions">
+              <span id="progress-count">0 / 0</span>
+              <button id="cancel-operation" class="cancel-button" type="button" disabled>중단</button>
+            </span>
           </div>
           <progress id="progress-bar" max="1" value="0"></progress>
           <p id="progress-detail">항목을 준비하고 있습니다.</p>
@@ -134,14 +137,23 @@
 
         <div class="action-row">
           <button id="scan-folder" type="button" disabled>검사</button>
-          <button id="normalize-folder" type="button" disabled>지금 정리</button>
+          <button id="normalize-folder" type="button" disabled>선택 항목 정리</button>
         </div>
 
         <div class="result-box">
-          <h3>검사 결과</h3>
+          <div class="result-head">
+            <h3>검사 결과</h3>
+            <span id="selected-target-count" class="plain-value">0개 선택</span>
+          </div>
+          <div class="selection-controls">
+            <button id="select-all-targets" type="button" disabled>모두 선택</button>
+            <button id="clear-target-selection" type="button" disabled>모두 해제</button>
+          </div>
+          <p class="selection-hint">폴더를 선택하면 그 안의 변환 대상도 함께 선택됩니다.</p>
           <ol id="targets" class="logs">
             <li>아직 검사한 폴더가 없습니다.</li>
           </ol>
+          <button id="show-more-targets" class="show-more-button" type="button" hidden>더 보기</button>
         </div>
       </section>
 
