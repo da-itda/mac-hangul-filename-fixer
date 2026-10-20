@@ -121,7 +121,7 @@
           </label>
         </div>
 
-        <p id="message" class="message">테스트용 폴더를 선택한 뒤 검사해보세요.</p>
+        <p id="message" class="message">검사할 폴더를 선택한 뒤 시작을 눌러주세요.</p>
 
         <div id="batch-progress" class="batch-progress" hidden>
           <div class="progress-head">
@@ -136,20 +136,19 @@
         </div>
 
         <div class="action-row">
-          <button id="scan-folder" type="button" disabled>검사</button>
-          <button id="normalize-folder" type="button" disabled>선택 항목 정리</button>
+          <h3>검사</h3>
+          <button id="scan-folder" type="button" disabled>시작</button>
         </div>
 
         <div class="result-box">
           <div class="result-head">
-            <h3>검사 결과</h3>
-            <span id="selected-target-count" class="plain-value">0개 선택</span>
+            <h3 id="result-title">검사</h3>
+            <div id="selection-controls" class="selection-controls">
+              <button id="select-all-targets" type="button" disabled>모두 선택</button>
+              <button id="clear-target-selection" type="button" disabled>모두 해제</button>
+              <button id="normalize-folder" type="button" disabled>시작</button>
+            </div>
           </div>
-          <div class="selection-controls">
-            <button id="select-all-targets" type="button" disabled>모두 선택</button>
-            <button id="clear-target-selection" type="button" disabled>모두 해제</button>
-          </div>
-          <p class="selection-hint">폴더를 선택하면 그 안의 변환 대상도 함께 선택됩니다.</p>
           <ol id="targets" class="logs">
             <li>아직 검사한 폴더가 없습니다.</li>
           </ol>

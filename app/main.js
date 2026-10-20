@@ -16,6 +16,9 @@ const message = document.querySelector("#message");
 const targetsList = document.querySelector("#targets");
 const showMoreTargetsButton = document.querySelector("#show-more-targets");
 const resultBox = document.querySelector(".result-box");
+const actionRow = document.querySelector(".action-row");
+const resultTitle = document.querySelector("#result-title");
+const selectionControls = document.querySelector("#selection-controls");
 const logsList = document.querySelector("#logs");
 const batchProgress = document.querySelector("#batch-progress");
 const progressTitle = document.querySelector("#progress-title");
@@ -25,7 +28,6 @@ const progressDetail = document.querySelector("#progress-detail");
 const cancelOperationButton = document.querySelector("#cancel-operation");
 const selectAllTargetsButton = document.querySelector("#select-all-targets");
 const clearTargetSelectionButton = document.querySelector("#clear-target-selection");
-const selectedTargetCount = document.querySelector("#selected-target-count");
 const folderList = document.querySelector("#folder-list");
 const waitTimeSelect = document.querySelector("#wait-time");
 const defaultRecursiveInput = document.querySelector("#default-recursive");
@@ -55,6 +57,7 @@ const updateProgressDetail = document.querySelector("#update-progress-detail");
 let folderPath = "";
 let lastTargets = [];
 let selectedTargetIndices = new Set();
+let hasScanResults = false;
 let manualOperationBusy = false;
 let resultMode = "targets";
 let visibleResultCount = 100;
@@ -81,11 +84,11 @@ chooseFolderButton.addEventListener("click", async () => {
   await saveCurrentSettings({ syncWatch: settings.autoWatchEnabled });
 
   if (addResult.addedCount === 0) {
-    message.textContent = "이미 저장된 폴더입니다. 먼저 검사해보세요.";
+    message.textContent = "이미 저장된 폴더입니다. 시작을 눌러 검사해보세요.";
     return;
   }
 
-  message.textContent = `${addResult.addedCount}개 폴더를 추가했습니다. 먼저 검사해보세요.`;
+  message.textContent = `${addResult.addedCount}개 폴더를 추가했습니다. 시작을 눌러 검사해보세요.`;
 });
 
 waitTimeSelect.addEventListener("change", async () => {
@@ -164,8 +167,11 @@ scanFolderButton.addEventListener("click", async () => {
     });
     lastTargets = outcome.targets ?? [];
     selectedTargetIndices = new Set(lastTargets.map((_, index) => index));
+    resultMode = "targets";
+    hasScanResults = true;
 
     setResultBoxVisible(true);
+    renderSelectedFolderControls();
     renderTargets();
     normalizeFolderButton.disabled = selectedTargetIndices.size === 0;
     message.textContent = outcome.cancelled
@@ -535,6 +541,7 @@ function selectFolder(path, options = {}) {
   folderPath = path;
   lastTargets = [];
   selectedTargetIndices.clear();
+  hasScanResults = false;
   selectedFolder.textContent = folderPath;
   scanFolderButton.disabled = false;
   normalizeFolderButton.disabled = true;
@@ -593,6 +600,7 @@ async function removeSelectedFolder() {
   settings.watchFolders.splice(index, 1);
   folderPath = settings.watchFolders[Math.max(0, index - 1)]?.path ?? settings.watchFolders[0]?.path ?? "";
   lastTargets = [];
+  hasScanResults = false;
   setResultBoxVisible(false);
   renderTargets([]);
   normalizeFolderButton.disabled = true;
@@ -612,11 +620,11 @@ function renderSelectedFolderControls() {
   selectedFolderEnabledInput.disabled = !hasFolder;
   selectedFolderRecursiveInput.disabled = !hasFolder;
   removeSelectedFolderButton.disabled = !hasFolder;
-  scanFolderButton.disabled = !hasFolder;
-
-  if (!hasFolder) {
-    normalizeFolderButton.disabled = true;
-  }
+  actionRow.hidden = hasScanResults;
+  selectionControls.hidden = !hasScanResults;
+  resultTitle.textContent = resultMode === "results" ? "정리 결과" : "검사";
+  scanFolderButton.disabled = !hasFolder || hasScanResults;
+  normalizeFolderButton.disabled = !hasFolder || !hasScanResults || selectedTargetIndices.size === 0;
 }
 
 function emptyFolderRows(count = 5) {
@@ -840,7 +848,6 @@ function renderCurrentResults() {
 }
 
 function updateTargetSelectionControls() {
-  selectedTargetCount.textContent = `${selectedTargetIndices.size}개 선택`;
   selectAllTargetsButton.disabled = manualOperationBusy || lastTargets.length === 0 || selectedTargetIndices.size === lastTargets.length;
   clearTargetSelectionButton.disabled = manualOperationBusy || selectedTargetIndices.size === 0;
   normalizeFolderButton.disabled = manualOperationBusy || selectedTargetIndices.size === 0;
@@ -859,12 +866,14 @@ function isPathWithin(candidatePath, directoryPath) {
 
 function renderResults(results) {
   setResultBoxVisible(true);
+  hasScanResults = false;
   lastTargets = [];
   selectedTargetIndices.clear();
   lastResults = results;
   resultMode = "results";
   visibleResultCount = 100;
   renderResultRows();
+  renderSelectedFolderControls();
   updateTargetSelectionControls();
 }
 

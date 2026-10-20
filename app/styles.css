@@ -509,9 +509,21 @@ input[type="radio"]:checked:disabled {
 
 .action-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-top: 7px;
+}
+
+.action-row[hidden],
+.selection-controls[hidden] {
+  display: none;
+}
+
+.action-row h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .message {
@@ -606,6 +618,7 @@ progress::-webkit-progress-value {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 7px;
 }
 
@@ -618,21 +631,14 @@ progress::-webkit-progress-value {
 .selection-controls {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 7px;
 }
 
 .selection-controls button {
   min-height: 23px;
   padding: 0 8px;
   font-size: 11px;
-}
-
-.selection-hint {
-  margin: 0 0 7px;
-  color: var(--muted);
-  font-size: 11px;
-  text-align: right;
 }
 
 .show-more-button {
