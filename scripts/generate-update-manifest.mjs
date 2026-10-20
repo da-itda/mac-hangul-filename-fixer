@@ -5,7 +5,7 @@ const root = new URL("../", import.meta.url);
 const config = JSON.parse(await readFile(new URL("src-tauri/tauri.conf.json", root), "utf8"));
 const version = config.version;
 const productName = "HangulBond";
-const baseUrl = "https://download.newer.co.kr/hangulbond";
+const baseUrl = `https://github.com/da-itda/mac-hangul-filename-fixer/releases/download/v${version}`;
 const bundleRoot = new URL("src-tauri/target/release/bundle/", root);
 const macosBundle = new URL("macos/", bundleRoot);
 const dmgBundle = new URL("dmg/", bundleRoot);
@@ -36,11 +36,11 @@ const latest = {
   platforms: {
     "darwin-aarch64-app": {
       signature,
-      url: `${baseUrl}/releases/${version}/darwin-aarch64/${updateFileName}`
+      url: `${baseUrl}/${updateFileName}`
     },
     "darwin-aarch64": {
       signature,
-      url: `${baseUrl}/releases/${version}/darwin-aarch64/${updateFileName}`
+      url: `${baseUrl}/${updateFileName}`
     }
   }
 };
@@ -48,8 +48,7 @@ const latest = {
 await writeFile(latestJsonUrl, `${JSON.stringify(latest, null, 2)}\n`);
 
 console.log(`Prepared release files in ${outRoot.pathname}`);
-console.log(`Upload latest.json to ${baseUrl}/latest.json`);
-console.log(`Upload darwin-aarch64 files to ${baseUrl}/releases/${version}/darwin-aarch64/`);
+console.log(`Attach latest.json and the darwin-aarch64 files to GitHub Release v${version}.`);
 
 async function findFile(directoryUrl, suffix) {
   const entries = await readdir(directoryUrl);

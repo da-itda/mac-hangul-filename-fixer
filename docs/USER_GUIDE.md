@@ -6,7 +6,7 @@
 
 ## 다운로드 및 설치
 
-1. [한글본드 0.1.4 DMG 다운로드](https://download.newer.co.kr/hangulbond/releases/0.1.4/darwin-aarch64/HangulBond_0.1.4_aarch64.dmg)를 누릅니다.
+1. [GitHub 최신 릴리스](https://github.com/da-itda/mac-hangul-filename-fixer/releases/latest)에서 macOS Apple silicon용 DMG를 다운로드합니다.
 2. 내려받은 DMG를 열고 `한글본드.app`을 `응용 프로그램`으로 옮깁니다.
 3. `응용 프로그램`에서 한글본드를 실행합니다.
 
@@ -56,7 +56,7 @@
 
 ## 지원 및 링크
 
-- [최신 공개 DMG 다운로드](https://download.newer.co.kr/hangulbond/releases/0.1.4/darwin-aarch64/HangulBond_0.1.4_aarch64.dmg)
+- [최신 공개 DMG 다운로드](https://github.com/da-itda/mac-hangul-filename-fixer/releases/latest)
 - [뉴어 홈페이지](https://newer.co.kr/)
-- [한글본드 업데이트 정보](https://download.newer.co.kr/hangulbond/latest.json)
+- [자동 업데이트 정보 및 파일](https://github.com/da-itda/mac-hangul-filename-fixer/releases)
 - [프로젝트 저장소](https://github.com/da-itda/mac-hangul-filename-fixer)

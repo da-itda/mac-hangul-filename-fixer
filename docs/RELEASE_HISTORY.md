@@ -1,5 +1,11 @@
 # 릴리스 기록
 
+## 0.1.5 — 2026-10-20
+
+- 업데이트 정보와 macOS 다운로드 파일을 GitHub Releases에서 제공
+- 신규 updater 서명 키 적용. 기존 0.1.4 사용자는 0.1.5 DMG를 한 번 직접 설치해야 이후 자동 업데이트를 받을 수 있음
+- Apple Developer ID 서명과 공증을 적용한 Apple silicon용 DMG 제공
+
 ## 0.1.4 — 2026-10-02
 
 - macOS 메뉴바 아이콘 템플릿과 설정 화면 개선
@@ -8,4 +14,4 @@
 - 설치된 0.1.3 앱에서 0.1.4 자동 업데이트 및 폴더 접근 권한 유지 확인
 - 릴리스 커밋: `d67d7d3`
 
-현재 공개 업데이트 피드: `https://download.newer.co.kr/hangulbond/latest.json`
+GitHub Releases에서 설치 파일과 자동 업데이트 정보를 관리한다.

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "한글본드",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "identifier": "com.hangulbond.desktop",
   "build": {
     "frontendDist": "../app"
@@ -35,9 +35,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJGNTE4NEREODU5N0RDRjYKUldUMjNKZUYzWVJSTHhOQWd4d2ZTU0xsdmM2dDU0T0hhU1hybU0zRkFwT1N2SmQ0TGk1MUpBSDUK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRCNEEzODM2NjA1Q0ZBM0MKUldROCtseGdOamhLU3dxNTRNb21tWTNXT3ZpUWpaa0lKNWJVM1FvU0Y0N0JDVmVXNUUwZ3FOYysK",
       "endpoints": [
-        "https://download.newer.co.kr/hangulbond/latest.json"
+        "https://github.com/da-itda/mac-hangul-filename-fixer/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

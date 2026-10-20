@@ -4,9 +4,9 @@
 
 ## 다운로드
 
-- **macOS Apple silicon용 최신 공개 DMG (0.1.4):** [한글본드 0.1.4 다운로드](https://download.newer.co.kr/hangulbond/releases/0.1.4/darwin-aarch64/HangulBond_0.1.4_aarch64.dmg)
+- **macOS Apple silicon용 최신 공개 DMG:** [GitHub 최신 릴리스에서 다운로드](https://github.com/da-itda/mac-hangul-filename-fixer/releases/latest)
 - [뉴어 홈페이지](https://newer.co.kr/)
-- [자동 업데이트 정보](https://download.newer.co.kr/hangulbond/latest.json) — 설치된 앱의 `정보` 탭에서 업데이트를 확인할 수 있습니다.
+- 설치된 앱의 `정보` 탭에서 자동 업데이트를 확인할 수 있습니다.
 
 현재 다운로드는 Apple silicon(arm64)용입니다. Intel Mac용 빌드는 제공하지 않습니다.
 
@@ -39,7 +39,7 @@
 
 `일반` 탭에서 `자동 감시`를 켜면 감시 대상으로 표시된 폴더의 새 파일을 확인합니다. 로그인할 때 앱을 함께 실행하려면 `로그인 시 자동 실행`을 켭니다.
 
-새 버전은 `정보` 탭의 `확인` 버튼으로 설치할 수 있습니다. 업데이트가 끝나면 앱이 다시 시작됩니다.
+새 버전과 다운로드 파일은 [GitHub Releases](https://github.com/da-itda/mac-hangul-filename-fixer/releases)에서 관리합니다. 설치된 앱은 GitHub의 업데이트 정보를 확인하고, 서명이 검증된 업데이트를 설치한 뒤 다시 시작합니다.
 
 ## 문제가 해결되지 않을 때
 
