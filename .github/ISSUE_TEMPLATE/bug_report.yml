@@ -1,0 +1,50 @@
+name: 버그 신고
+description: 파일명이 정리되지 않거나 앱·확장이 이상하게 동작할 때
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        신고 전에 [문제 해결](https://github.com/da-itda/mac-nfd-nfc-hangulbond/blob/main/docs/TROUBLESHOOTING.md)과 [자주 묻는 질문](https://github.com/da-itda/mac-nfd-nfc-hangulbond#자주-묻는-질문)을 확인해 주세요.
+        개인정보가 담긴 파일명이나 화면은 가려서 올려 주세요.
+  - type: dropdown
+    id: component
+    attributes:
+      label: 어디에서 생긴 문제인가요?
+      options:
+        - 한글본드 앱 (파일명 정리)
+        - Chrome 확장 (웹 업로드)
+        - 설치·업데이트
+        - 기타
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 어떤 문제인가요?
+      description: 무엇을 했을 때 어떻게 되었는지, 원래 기대한 결과는 무엇인지 적어 주세요.
+      placeholder: 예) Chrome으로 Gmail에 첨부한 파일이 Windows에서 ㅎㅏㄴㄱㅡㄹ.pdf로 보입니다.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 한글본드 버전
+      description: 앱의 `정보` 탭에 표시됩니다.
+      placeholder: 예) 0.1.6
+  - type: input
+    id: macos
+    attributes:
+      label: macOS 버전과 Mac 종류
+      placeholder: 예) macOS 15.1, MacBook Air M2
+  - type: input
+    id: where
+    attributes:
+      label: 보낸 곳·받은 곳
+      description: 해당하면 적어 주세요.
+      placeholder: 예) Chrome → Gmail → Windows 11 탐색기
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그나 화면 캡처
+      description: 앱의 `로그` 탭 내용이나 화면 캡처를 붙여 주세요.

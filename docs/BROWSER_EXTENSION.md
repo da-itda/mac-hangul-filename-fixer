@@ -30,6 +30,7 @@
 
 ## 설치
 
+- 터미널 설치: `install.sh`가 앱을 설치하면서 Chrome 외부 확장 등록 파일(`~/Library/Application Support/Google/Chrome/External Extensions/hmgopkkefgfppfedloeponobiamikomf.json`)을 만든다. Chrome을 다시 열면 사용 설정 알림이 나온다. 웹 스토어에 공개된 뒤에만 동작하며, 공개 여부는 Chrome 업데이트 서버 응답(302)으로 확인한다.
 - 웹 스토어 등록 전: Chrome에서 `chrome://extensions` → 개발자 모드 → `압축해제된 확장 프로그램을 로드합니다` → `browser-extension/extension` 폴더 선택
 - 웹 스토어 등록 후: https://chromewebstore.google.com/detail/hmgopkkefgfppfedloeponobiamikomf (심사 통과 후 열림)
 

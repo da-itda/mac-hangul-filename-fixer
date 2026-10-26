@@ -12,7 +12,7 @@
 - **권한:** 확장은 별도 권한을 요청하지 않습니다. 모든 웹사이트에서 파일 업로드를 보정하기 위해 http·https 페이지에서만 동작하는 스크립트를 사용합니다.
 - **저장소:** 브라우저 저장소, 쿠키, 원격 코드를 사용하지 않습니다.
 
-이 방침이 바뀌면 이 문서를 갱신하고 시행일을 고칩니다. 문의는 https://github.com/da-itda/mac-hangul-filename-fixer/issues 로 해 주세요.
+이 방침이 바뀌면 이 문서를 갱신하고 시행일을 고칩니다. 문의는 https://github.com/da-itda/mac-nfd-nfc-hangulbond/issues 로 해 주세요.
 
 ## English
 
@@ -24,4 +24,4 @@ The HangulBond browser extension only converts file names to Unicode NFC when yo
 - **Permissions:** The extension requests no additional permissions. It runs a content script on http and https pages to correct file uploads on any site.
 - **Storage:** The extension uses no browser storage, cookies, or remote code.
 
-If this policy changes, this document and its effective date will be updated. Contact: https://github.com/da-itda/mac-hangul-filename-fixer/issues
+If this policy changes, this document and its effective date will be updated. Contact: https://github.com/da-itda/mac-nfd-nfc-hangulbond/issues

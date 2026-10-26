@@ -138,7 +138,7 @@ websiteLink.addEventListener("click", async (event) => {
   try {
     await invoke("open_website");
   } catch (error) {
-    updateState.textContent = "웹사이트 열기 실패";
+    updateState.textContent = "홈페이지 열기 실패";
     updateState.title = String(error);
   }
 });

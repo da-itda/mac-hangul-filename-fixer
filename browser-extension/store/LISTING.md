@@ -24,8 +24,8 @@ Chrome 웹 스토어 개발자 대시보드(https://chrome.google.com/webstore/d
 | 아이콘 | `browser-extension/extension/icons/icon-128.png` |
 | 스크린샷 (1280×800) | `browser-extension/store/screenshot.png` |
 | 작은 프로모션 타일 (440×280) | `browser-extension/store/promo.png` |
-| 홈페이지 | https://github.com/da-itda/mac-hangul-filename-fixer |
-| 지원 | https://github.com/da-itda/mac-hangul-filename-fixer/issues |
+| 홈페이지 | https://github.com/da-itda/mac-nfd-nfc-hangulbond |
+| 지원 | https://github.com/da-itda/mac-nfd-nfc-hangulbond/issues |
 
 ### 상세 설명 (한국어)
 
@@ -48,7 +48,7 @@ Chrome 웹 스토어 개발자 대시보드(https://chrome.google.com/webstore/d
 - 폴더째 올리기는 폴더 구조를 지키기 위해 변환하지 않습니다.
 
 맥 디스크의 파일명을 정리하려면 한글본드 앱을 함께 사용하세요.
-https://github.com/da-itda/mac-hangul-filename-fixer
+https://github.com/da-itda/mac-nfd-nfc-hangulbond
 ```
 
 ### 상세 설명 (English)
@@ -70,4 +70,4 @@ Supports file pickers, regular form submissions, and drag and drop on http and h
 | 원격 코드 사용 | 아니요 |
 | 데이터 사용 | 수집하는 사용자 데이터 없음 (모든 항목 체크하지 않음) |
 | 인증 | 판매·무관한 용도 사용·신용 평가 용도 사용을 하지 않음에 모두 동의 |
-| 개인정보처리방침 URL | https://github.com/da-itda/mac-hangul-filename-fixer/blob/main/docs/BROWSER_EXTENSION_PRIVACY.md (저장소에 푸시한 뒤 열리는지 확인) |
+| 개인정보처리방침 URL | https://github.com/da-itda/mac-nfd-nfc-hangulbond/blob/main/docs/BROWSER_EXTENSION_PRIVACY.md (저장소에 푸시한 뒤 열리는지 확인) |

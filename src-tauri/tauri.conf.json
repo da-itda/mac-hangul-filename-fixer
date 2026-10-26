@@ -37,7 +37,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRCNEEzODM2NjA1Q0ZBM0MKUldROCtseGdOamhLU3dxNTRNb21tWTNXT3ZpUWpaa0lKNWJVM1FvU0Y0N0JDVmVXNUUwZ3FOYysK",
       "endpoints": [
-        "https://github.com/da-itda/mac-hangul-filename-fixer/releases/latest/download/latest.json"
+        "https://github.com/da-itda/mac-nfd-nfc-hangulbond/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

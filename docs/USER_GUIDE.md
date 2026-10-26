@@ -6,11 +6,20 @@
 
 ## 다운로드 및 설치
 
-1. [GitHub 최신 릴리스](https://github.com/da-itda/mac-hangul-filename-fixer/releases/latest)에서 macOS Apple silicon용 DMG를 다운로드합니다.
-2. 내려받은 DMG를 열고 `한글본드.app`을 `응용 프로그램`으로 옮깁니다.
-3. `응용 프로그램`에서 한글본드를 실행합니다.
+설치 방법은 두 가지입니다.
 
-앱의 최신 버전은 [뉴어 홈페이지](https://newer.co.kr/)에서 확인할 수 있습니다. 앱 안에서는 `정보` 탭의 `확인` 버튼으로 업데이트할 수 있습니다.
+- **터미널로 설치 (앱 + Chrome 확장):** `터미널`에 아래 명령을 붙여 넣습니다.
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/da-itda/mac-nfd-nfc-hangulbond/main/install.sh | bash
+  ```
+
+- **직접 다운로드:**
+  1. [GitHub 최신 릴리스](https://github.com/da-itda/mac-nfd-nfc-hangulbond/releases/latest)에서 macOS Apple silicon용 DMG를 다운로드합니다.
+  2. 내려받은 DMG를 열고 `한글본드.app`을 `응용 프로그램`으로 옮깁니다.
+  3. `응용 프로그램`에서 한글본드를 실행합니다.
+
+앱 안에서는 `정보` 탭의 `확인` 버튼으로 업데이트할 수 있습니다. 버전별 변경 내용은 [업데이트 소식](../CHANGELOG.md)에서 확인하세요.
 
 ## 폴더를 검사하고 정리하기
 
@@ -62,7 +71,7 @@
 
 ## 지원 및 링크
 
-- [최신 공개 DMG 다운로드](https://github.com/da-itda/mac-hangul-filename-fixer/releases/latest)
-- [뉴어 홈페이지](https://newer.co.kr/)
-- [자동 업데이트 정보 및 파일](https://github.com/da-itda/mac-hangul-filename-fixer/releases)
-- [프로젝트 저장소](https://github.com/da-itda/mac-hangul-filename-fixer)
+- [최신 공개 DMG 다운로드](https://github.com/da-itda/mac-nfd-nfc-hangulbond/releases/latest)
+- [업데이트 소식](../CHANGELOG.md)
+- [문의·버그 신고](https://github.com/da-itda/mac-nfd-nfc-hangulbond/issues)
+- [프로젝트 저장소](https://github.com/da-itda/mac-nfd-nfc-hangulbond)
