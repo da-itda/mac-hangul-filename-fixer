@@ -28,7 +28,7 @@
 ## 설치
 
 - 웹 스토어 등록 전: Chrome에서 `chrome://extensions` → 개발자 모드 → `압축해제된 확장 프로그램을 로드합니다` → `browser-extension/extension` 폴더 선택
-- 웹 스토어 등록 후: 스토어 페이지에서 설치 (주소는 등록 후 추가)
+- 웹 스토어 등록 후: https://chromewebstore.google.com/detail/hmgopkkefgfppfedloeponobiamikomf (심사 통과 후 열림)
 
 ## 개발
 

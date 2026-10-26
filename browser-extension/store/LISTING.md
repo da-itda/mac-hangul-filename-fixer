@@ -2,6 +2,12 @@
 
 Chrome 웹 스토어 개발자 대시보드(https://chrome.google.com/webstore/devconsole)에 그대로 입력할 내용이다.
 
+## 등록 상태
+
+- 게시자: newer.corpor@gmail.com
+- 항목 ID: `hmgopkkefgfppfedloeponobiamikomf`
+- 2026-10-26: 초안 작성 완료(패키지 0.1.0, 등록정보, 이미지, 개인정보 보호). 심사 제출 전
+
 ## 패키지
 
 - 파일: `npm run package:extension` → `dist/browser-extension/hangulbond-extension-<version>.zip`
