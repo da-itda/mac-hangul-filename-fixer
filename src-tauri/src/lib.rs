@@ -1,3 +1,4 @@
+mod browser_extension;
 mod logs;
 mod normalizer;
 mod scanner;
@@ -315,6 +316,33 @@ fn app_info(app: AppHandle) -> Result<AppInfo, String> {
 #[tauri::command]
 fn open_website() -> Result<(), String> {
     open_external_url(WEBSITE_URL)
+}
+
+#[tauri::command]
+async fn chrome_extension_status() -> Result<browser_extension::ExtensionState, String> {
+    let home = home_dir()?;
+    async_runtime::spawn_blocking(move || browser_extension::status(&home, true))
+        .await
+        .map_err(|error| format!("extension status worker failed: {error}"))
+}
+
+#[tauri::command]
+async fn register_chrome_extension() -> Result<browser_extension::ExtensionState, String> {
+    let home = home_dir()?;
+    async_runtime::spawn_blocking(move || browser_extension::register(&home))
+        .await
+        .map_err(|error| format!("extension register worker failed: {error}"))?
+}
+
+#[tauri::command]
+fn open_extension_store() -> Result<(), String> {
+    open_external_url(browser_extension::STORE_URL)
+}
+
+fn home_dir() -> Result<PathBuf, String> {
+    std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| "HOME is not set".to_string())
 }
 
 #[tauri::command]
@@ -798,6 +826,9 @@ pub fn run() {
             normalize_saved_folders,
             app_info,
             open_website,
+            chrome_extension_status,
+            register_chrome_extension,
+            open_extension_store,
             restart_app
         ])
         .on_window_event(|window, event| {

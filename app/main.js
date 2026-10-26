@@ -53,11 +53,24 @@ const updateState = document.querySelector("#update-state");
 const updateProgress = document.querySelector("#update-progress");
 const updateProgressBar = document.querySelector("#update-progress-bar");
 const updateProgressDetail = document.querySelector("#update-progress-detail");
+const extensionState = document.querySelector("#extension-state");
+const openExtensionStoreButton = document.querySelector("#open-extension-store");
+
+const AUTO_UPDATE_DELAY_MS = 30 * 1000;
+const AUTO_UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const EXTENSION_LABELS = {
+  noChrome: "Chrome 없음",
+  installed: "설치됨",
+  registered: "Chrome 재시작 후 사용 설정",
+  notPublished: "공개 준비 중",
+  notRegistered: "설치 안 됨"
+};
 
 let folderPath = "";
 let lastTargets = [];
 let selectedTargetIndices = new Set();
 let hasScanResults = false;
+let updateInProgress = false;
 let manualOperationBusy = false;
 let resultMode = "targets";
 let visibleResultCount = 100;
@@ -144,6 +157,13 @@ websiteLink.addEventListener("click", async (event) => {
 });
 
 checkUpdateButton.addEventListener("click", checkForUpdates);
+openExtensionStoreButton.addEventListener("click", async () => {
+  try {
+    await invoke("open_extension_store");
+  } catch (error) {
+    extensionState.title = String(error);
+  }
+});
 removeSelectedFolderButton.addEventListener("click", async () => {
   await removeSelectedFolder();
 });
@@ -277,6 +297,9 @@ async function init() {
   await loadAppInfo();
   await refreshWatchStatus();
   await loadRecentLogs();
+  setupChromeExtension();
+  setTimeout(autoUpdate, AUTO_UPDATE_DELAY_MS);
+  setInterval(autoUpdate, AUTO_UPDATE_INTERVAL_MS);
   await listen("watcher-results", async (event) => {
     const results = Array.isArray(event.payload) ? event.payload : [];
     if (results.length > 0) {
@@ -312,6 +335,9 @@ function showTab(tabName) {
     panel.classList.toggle("active", panel.dataset.panel === tabName);
   }
 
+  if (tabName === "about") {
+    refreshExtensionState();
+  }
   scheduleWindowFit();
 }
 
@@ -381,7 +407,11 @@ async function checkForUpdates() {
     updateState.title = "업데이트 플러그인을 불러오지 못했습니다.";
     return;
   }
+  if (updateInProgress) {
+    return;
+  }
 
+  updateInProgress = true;
   checkUpdateButton.disabled = true;
   updateState.textContent = "확인 중";
   updateState.removeAttribute("title");
@@ -395,44 +425,103 @@ async function checkForUpdates() {
       return;
     }
 
-    updateState.textContent = `새 버전 ${update.version}`;
-    showUpdateProgress("다운로드 준비 중", 0, 1);
-
-    let downloaded = 0;
-    let contentLength = 0;
-    await update.downloadAndInstall((event) => {
-      if (event.event === "Started") {
-        downloaded = 0;
-        contentLength = Number(event.data.contentLength) || 0;
-        showUpdateProgress("다운로드 중", 0, contentLength || 1);
-        return;
-      }
-
-      if (event.event === "Progress") {
-        downloaded += Number(event.data.chunkLength) || 0;
-        showUpdateProgress("다운로드 중", downloaded, contentLength || downloaded || 1);
-        return;
-      }
-
-      if (event.event === "Finished") {
-        showUpdateProgress("설치 중", contentLength || downloaded || 1, contentLength || downloaded || 1);
-      }
-    });
-
-    updateState.textContent = "재시작 중";
-    await invoke("restart_app");
+    await installUpdate(update);
   } catch (error) {
-    const errorText = String(error);
-    const userMessage = errorText.includes("platforms")
-      ? "배포 파일 확인 필요"
-      : "업데이트 정보를 확인할 수 없습니다.";
-    updateState.textContent = "확인 실패";
-    updateState.title = errorText;
-    updateProgressDetail.textContent = userMessage;
-    updateProgressDetail.title = errorText;
-    updateProgress.hidden = false;
+    showUpdateError(error);
   } finally {
+    updateInProgress = false;
     checkUpdateButton.disabled = false;
+  }
+}
+
+// 앱을 켠 뒤와 6시간마다 새 버전을 확인한다.
+// 설정 창이 닫혀 있고 검사·정리 중이 아니면 바로 설치하고 재시작한다. 아니면 정보 탭에 알린다.
+async function autoUpdate() {
+  if (!updater?.check || updateInProgress) {
+    return;
+  }
+
+  updateInProgress = true;
+  try {
+    const update = await updater.check();
+    if (!update) {
+      return;
+    }
+
+    const busy = !batchProgress.hidden || (await appWindow.isVisible());
+    if (busy) {
+      updateState.textContent = `새 버전 ${update.version}`;
+      updateState.title = "확인을 누르면 설치합니다.";
+      return;
+    }
+
+    checkUpdateButton.disabled = true;
+    await installUpdate(update);
+  } catch (error) {
+    // 네트워크 오류 등은 다음 확인 때 다시 시도한다.
+    updateState.title = String(error);
+  } finally {
+    updateInProgress = false;
+    checkUpdateButton.disabled = false;
+  }
+}
+
+async function installUpdate(update) {
+  updateState.textContent = `새 버전 ${update.version}`;
+  showUpdateProgress("다운로드 준비 중", 0, 1);
+
+  let downloaded = 0;
+  let contentLength = 0;
+  await update.downloadAndInstall((event) => {
+    if (event.event === "Started") {
+      downloaded = 0;
+      contentLength = Number(event.data.contentLength) || 0;
+      showUpdateProgress("다운로드 중", 0, contentLength || 1);
+      return;
+    }
+
+    if (event.event === "Progress") {
+      downloaded += Number(event.data.chunkLength) || 0;
+      showUpdateProgress("다운로드 중", downloaded, contentLength || downloaded || 1);
+      return;
+    }
+
+    if (event.event === "Finished") {
+      showUpdateProgress("설치 중", contentLength || downloaded || 1, contentLength || downloaded || 1);
+    }
+  });
+
+  updateState.textContent = "재시작 중";
+  await invoke("restart_app");
+}
+
+function showUpdateError(error) {
+  const errorText = String(error);
+  const userMessage = errorText.includes("platforms")
+    ? "배포 파일 확인 필요"
+    : "업데이트 정보를 확인할 수 없습니다.";
+  updateState.textContent = "확인 실패";
+  updateState.title = errorText;
+  updateProgressDetail.textContent = userMessage;
+  updateProgressDetail.title = errorText;
+  updateProgress.hidden = false;
+}
+
+// 웹 스토어에 공개된 뒤 처음 실행될 때 Chrome에 확장을 등록한다. Chrome이 사용 설정을 묻는다.
+async function setupChromeExtension() {
+  await refreshExtensionState("register_chrome_extension");
+}
+
+async function refreshExtensionState(command = "chrome_extension_status") {
+  try {
+    const state = await invoke(command);
+    extensionState.textContent = EXTENSION_LABELS[state] ?? state;
+    extensionState.removeAttribute("title");
+    openExtensionStoreButton.hidden = !(state === "registered" || state === "notRegistered");
+  } catch (error) {
+    extensionState.textContent = "확인 실패";
+    extensionState.title = String(error);
+    openExtensionStoreButton.hidden = true;
   }
 }
 

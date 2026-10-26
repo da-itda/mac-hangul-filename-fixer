@@ -50,7 +50,7 @@ curl -fsSL https://raw.githubusercontent.com/da-itda/mac-nfd-nfc-hangulbond/main
 1. [최신 릴리스](https://github.com/da-itda/mac-nfd-nfc-hangulbond/releases/latest)에서 `HangulBond_버전_aarch64.dmg`를 내려받습니다.
 2. DMG를 열고 `한글본드.app`을 `응용 프로그램` 폴더로 끌어 놓습니다.
 3. `응용 프로그램`에서 한글본드를 실행합니다. 메뉴 막대에 한글본드 아이콘이 나타납니다.
-4. Chrome을 쓴다면 [Chrome 웹 스토어](https://chromewebstore.google.com/detail/hmgopkkefgfppfedloeponobiamikomf)에서 `Chrome에 추가`를 누릅니다. (심사 통과 후 열립니다)
+4. Chrome을 쓴다면 앱이 한글본드 확장을 Chrome에 등록합니다. Chrome을 다시 열면 나오는 알림에서 `확장 프로그램 사용 설정`을 누르세요. 알림을 놓쳤다면 앱 `정보` 탭의 `Chrome 확장` → `설치`를 누르거나 [Chrome 웹 스토어](https://chromewebstore.google.com/detail/hmgopkkefgfppfedloeponobiamikomf)에서 추가합니다. (웹 스토어 심사 통과 후 동작합니다)
 
 ## 사용 방법
 
@@ -66,8 +66,9 @@ Chrome 확장은 설치만 하면 됩니다. 파일을 올릴 때 자동으로 �
 
 ## 업데이트
 
-- 앱의 `정보` 탭에서 `확인`을 누르면 새 버전을 내려받아 설치합니다. 서명이 확인된 업데이트만 설치합니다.
-- 터미널로 설치했다면 설치 명령을 다시 실행해도 됩니다.
+- 앱이 켜질 때와 6시간마다 새 버전을 확인해 자동으로 설치합니다. 서명이 확인된 업데이트만 설치합니다. 설정 창을 보고 있거나 정리 중일 때는 기다렸다가 `정보` 탭에 알립니다.
+- 0.1.6 이하 버전은 자동 확인 기능이 없으므로 `정보` 탭에서 `확인`을 한 번 눌러 주세요.
+- Chrome 확장은 Chrome이 자동으로 업데이트합니다.
 - 무엇이 바뀌었는지는 [업데이트 소식](CHANGELOG.md)과 [릴리스 목록](https://github.com/da-itda/mac-nfd-nfc-hangulbond/releases)에서 확인할 수 있습니다.
 - 새 버전 알림을 받으려면 이 페이지 오른쪽 위의 `Watch` → `Custom` → `Releases`를 선택하세요.
 

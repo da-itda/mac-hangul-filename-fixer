@@ -6,7 +6,8 @@ Chrome 웹 스토어 개발자 대시보드(https://chrome.google.com/webstore/d
 
 - 게시자: newer.corpor@gmail.com
 - 항목 ID: `hmgopkkefgfppfedloeponobiamikomf`
-- 2026-10-26: 초안 작성 완료(패키지 0.1.0, 등록정보, 이미지, 개인정보 보호). 심사 제출 전
+- 2026-10-26: 초안 작성 완료(패키지 0.1.0, 등록정보, 이미지, 개인정보 보호)
+- 2026-10-26: 저장소 주소 변경 반영, 설명 문구 개편, 패키지 0.1.1
 
 ## 패키지
 
@@ -30,35 +31,41 @@ Chrome 웹 스토어 개발자 대시보드(https://chrome.google.com/webstore/d
 ### 상세 설명 (한국어)
 
 ```text
-맥에서 Chrome으로 파일을 올리면 한글 파일명이 Windows나 웹에서 "ㅎㅏㄴㄱㅡㄹ.pdf"처럼 자소 분리되어 보이는 문제가 있습니다. 맥용 Chrome이 업로드할 때 파일명을 NFD(자소 분리) 형태로 보내기 때문입니다. 파일명을 미리 고쳐 두어도 업로드할 때 다시 분리됩니다.
+맥에서 보낸 파일, 받는 사람에게는 "ㅎㅏㄴㄱㅡㄹ.pdf"로 보이고 있지 않나요?
 
-한글본드 확장은 웹 페이지가 파일을 읽기 직전에 파일명을 NFC(완성형)로 바꿔, 받는 쪽에서도 "한글.pdf"로 정상 표시되게 합니다.
+맥용 Chrome은 파일을 올릴 때 한글 파일명을 자음·모음이 분리된 형태(NFD)로 보냅니다. 내 Mac에서는 멀쩡해 보여도 Windows와 대부분의 웹 서비스에서는 이름이 깨져 보입니다.
 
-지원
-- 파일 선택 업로드, 일반 폼 제출
-- 드래그 앤 드롭
-- http·https 사이트의 일반적인 파일 업로드 화면
+한글본드는 파일이 올라가는 순간 이름을 완성형(NFC)으로 바꿔, 받는 사람도 "한글.pdf" 그대로 보게 합니다.
 
-안전
-- 파일 내용은 그대로 두고 이름만 바꿉니다.
-- 이름이 바뀌어야 할 때만 동작하고, 이미 정상인 파일은 건드리지 않습니다.
-- 데이터를 수집하거나 외부로 보내지 않습니다. 별도 권한을 요청하지 않습니다.
+■ 이런 분께 필요합니다
+· Mac에서 Chrome으로 메일에 파일을 첨부하는 분
+· Google Drive, 게시판, 업무 시스템에 파일을 올리는 분
+· Windows를 쓰는 동료·고객과 파일을 주고받는 분
 
-알려진 제한
-- 폴더째 올리기는 폴더 구조를 지키기 위해 변환하지 않습니다.
+■ 설치하면 끝
+설정할 것이 없습니다. 파일 선택, 드래그 앤 드롭 업로드에서 자동으로 동작합니다.
 
-맥 디스크의 파일명을 정리하려면 한글본드 앱을 함께 사용하세요.
+■ 안전
+· 파일 이름만 바꾸고 내용은 건드리지 않습니다.
+· 이미 정상인 이름에는 개입하지 않습니다.
+· 데이터를 수집·저장·전송하지 않으며, 별도 권한을 요청하지 않습니다.
+
+Mac에 저장된 파일 이름까지 정리하려면 무료 한글본드 앱을 함께 사용하세요.
 https://github.com/da-itda/mac-nfd-nfc-hangulbond
 ```
 
 ### 상세 설명 (English)
 
 ```text
-When you upload files from a Mac in Chrome, Korean and accented file names can show up decomposed on Windows and websites, like "ㅎㅏㄴㄱㅡㄹ.pdf". Chrome on macOS sends file names in NFD form, so names are split again on upload even if you fixed them on disk.
+Do your files sent from a Mac show up as "ㅎㅏㄴㄱㅡㄹ.pdf" on the other side?
 
-HangulBond converts file names to NFC right before the page reads the files, so the recipient sees "한글.pdf".
+Chrome on macOS uploads Korean file names in decomposed form (NFD). They look fine on your Mac but break on Windows and most websites.
 
-Supports file pickers, regular form submissions, and drag and drop on http and https sites. File contents are never changed. The extension collects no data, sends nothing anywhere, and requests no permissions. Folder uploads are left unchanged to keep their folder structure.
+HangulBond converts the name to NFC the moment a file is uploaded, so recipients see "한글.pdf".
+
+Who needs it: Mac users who attach files in Chrome, upload to Google Drive or web forms, or share files with Windows users.
+No setup. Works on file pickers and drag and drop.
+Safe: only the file name changes, never the contents. No data is collected or sent, and no permissions are requested.
 ```
 
 ## 개인정보 보호 탭
