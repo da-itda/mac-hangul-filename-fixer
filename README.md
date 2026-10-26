@@ -79,7 +79,9 @@ Chrome 확장은 설치만 하면 됩니다. 파일을 올릴 때 자동으로 �
 curl -fsSL https://raw.githubusercontent.com/da-itda/mac-nfd-nfc-hangulbond/main/install.sh | bash -s -- --uninstall
 ```
 
-직접 삭제하려면 메뉴 막대에서 한글본드를 종료하고 `응용 프로그램`의 `한글본드.app`을 휴지통으로 옮깁니다. Chrome 확장은 `chrome://extensions`에서 삭제합니다. 설정과 로그는 `~/Library/Application Support/com.hangulbond.desktop`에 남으며, 필요 없으면 지워도 됩니다.
+실행 중인 앱을 종료하고 앱, 로그인 시 자동 실행 항목, 설정·로그·캐시, 개인정보 보호 권한 기록, Chrome 확장 등록을 모두 지웁니다. 설정을 남기려면 끝에 `--keep-settings`를 붙입니다: `... | bash -s -- --uninstall --keep-settings`
+
+직접 삭제하려면 메뉴 막대에서 `한글본드 종료`를 누른 뒤 `응용 프로그램`의 `한글본드.app`을 휴지통으로 옮깁니다. 설정과 로그는 `~/Library/Application Support/com.hangulbond.desktop`에 남으니 필요 없으면 지웁니다. Chrome 확장은 `chrome://extensions`에서 삭제합니다.
 
 ## 안전
 

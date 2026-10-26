@@ -27,6 +27,11 @@ Chromium(Chrome·Aside·Edge·Electron 앱)이 맥에서만 NFD로 보내는 이
 - 받는 쪽: 직접 운영하는 웹 서비스라면 서버에서 업로드 파일명을 NFC로 정규화한다(PHP `Normalizer::normalize($name, Normalizer::FORM_C)`, JS `name.normalize("NFC")`, Python `unicodedata.normalize("NFC", name)`).
 - Windows 수신자: Windows용 한글본드로 저장된 파일명을 정리한다 (계획 검토 중).
 
+## 삭제 명령 후에도 메뉴 막대에 한글본드가 남는다
+
+- 원인: macOS가 실행 중인 앱 경로를 자소 분리형(NFD)으로 기록한다. 이전 `install.sh`는 완성형 경로 `/Applications/한글본드.app/...`로 프로세스를 찾아 종료하지 못하고 앱 파일만 지웠다. 앱 파일이 지워진 뒤에는 AppleScript 종료 명령도 앱을 찾지 못한다.
+- 해결: 실행 파일 이름(`/Contents/MacOS/hangul-nfc-normalizer`)으로 찾아 종료 요청 → TERM → KILL 순서로 끈다. 이전 버전 사본도 이름 대신 번들 ID로 확인해 지운다. 경로 비교에 한글 이름을 쓰지 않는다.
+
 ## 프로젝트를 옮긴 뒤 `cargo test`·`npm run dev`가 실패한다
 
 - 원인: `src-tauri/target/`에 이전 경로(SynologyDrive)가 남아 있다.
