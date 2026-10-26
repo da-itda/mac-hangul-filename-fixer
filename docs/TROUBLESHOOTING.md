@@ -32,6 +32,11 @@ Chromium(Chrome·Aside·Edge·Electron 앱)이 맥에서만 NFD로 보내는 이
 - 원인: macOS가 실행 중인 앱 경로를 자소 분리형(NFD)으로 기록한다. 이전 `install.sh`는 완성형 경로 `/Applications/한글본드.app/...`로 프로세스를 찾아 종료하지 못하고 앱 파일만 지웠다. 앱 파일이 지워진 뒤에는 AppleScript 종료 명령도 앱을 찾지 못한다.
 - 해결: 실행 파일 이름(`/Contents/MacOS/hangul-nfc-normalizer`)으로 찾아 종료 요청 → TERM → KILL 순서로 끈다. 이전 버전 사본도 이름 대신 번들 ID로 확인해 지운다. 경로 비교에 한글 이름을 쓰지 않는다.
 
+## 터미널 재설치 때 관리자 암호를 묻는다
+
+- 원인: 한 번 실행된 앱은 macOS 앱 보호(`com.apple.macl`) 때문에 쓰기 권한 검사(`[ -w ]`, `access()`)가 거짓으로 나온다. 실제 이동·삭제는 일반 권한으로 된다.
+- 해결: `install.sh`는 미리 검사하지 않고 일반 권한으로 먼저 실행한 뒤 실패할 때만 `sudo`를 쓴다. 기존 앱은 옆으로 옮겨 두었다가 새 앱 복사가 끝나면 지운다.
+
 ## 프로젝트를 옮긴 뒤 `cargo test`·`npm run dev`가 실패한다
 
 - 원인: `src-tauri/target/`에 이전 경로(SynologyDrive)가 남아 있다.

@@ -32,14 +32,12 @@ step() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
 fail() { printf '\033[31m오류:\033[0m %s\n' "$*" >&2; exit 1; }
 
-# 설치 폴더나 기존 앱에 쓸 수 없으면 관리자 암호를 묻는다.
+# 먼저 현재 권한으로 실행하고, 실패하면 관리자 암호를 묻는다.
+# 실행된 적 있는 앱은 macOS 앱 보호 때문에 쓰기 권한 검사(-w)가 실제와 다르게 나오므로 미리 검사하지 않는다.
 run_privileged() {
-  if [ -w "$INSTALL_DIR" ] && { [ ! -e "$APP_PATH" ] || [ -w "$APP_PATH" ]; }; then
-    "$@"
-  else
-    note "응용 프로그램 폴더에 쓰려면 Mac 로그인 암호가 필요합니다."
-    sudo "$@"
-  fi
+  "$@" 2>/dev/null && return 0
+  note "응용 프로그램 폴더를 바꾸려면 Mac 로그인 암호가 필요합니다."
+  sudo "$@"
 }
 
 quit_app() {
@@ -130,8 +128,18 @@ install_app() {
 
   quit_app
   step "$APP_PATH 에 설치합니다."
-  run_privileged rm -rf "$APP_PATH"
-  run_privileged ditto "$source" "$APP_PATH"
+  # 기존 앱은 옆으로 옮겨 두었다가 새 앱 복사가 끝나면 지운다. 실패하면 되돌린다.
+  local previous="$INSTALL_DIR/.hangulbond-previous-$$.app"
+  if [ -e "$APP_PATH" ]; then
+    run_privileged mv "$APP_PATH" "$previous"
+  fi
+  if ! run_privileged ditto "$source" "$APP_PATH"; then
+    [ -e "$previous" ] && run_privileged mv "$previous" "$APP_PATH"
+    fail "앱을 설치하지 못했습니다. 기존 앱은 그대로 두었습니다."
+  fi
+  if [ -e "$previous" ]; then
+    run_privileged rm -rf "$previous"
+  fi
 
   if [ "${INSTALL_EXTENSION:-1}" = "1" ]; then
     install_extension
