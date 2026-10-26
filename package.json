@@ -12,7 +12,9 @@
     "test:rust": "cd src-tauri && cargo test",
     "release:bump": "node scripts/bump-version.mjs patch",
     "release:bump:minor": "node scripts/bump-version.mjs minor",
-    "release:manifest": "node scripts/generate-update-manifest.mjs"
+    "release:manifest": "node scripts/generate-update-manifest.mjs",
+    "test:extension": "node browser-extension/e2e/run.mjs",
+    "package:extension": "node scripts/package-extension.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.2"

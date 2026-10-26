@@ -1,0 +1,5 @@
+{
+  "extName": { "message": "한글본드 - 업로드 파일명 자소 분리 방지" },
+  "extShortName": { "message": "한글본드" },
+  "extDescription": { "message": "맥에서 웹에 파일을 올릴 때 한글 파일명이 ㅎㅏㄴㄱㅡㄹ처럼 자소 분리되지 않도록 NFC로 바꿔 전송합니다." }
+}

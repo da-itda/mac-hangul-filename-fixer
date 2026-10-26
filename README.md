@@ -41,6 +41,12 @@
 
 새 버전과 다운로드 파일은 [GitHub Releases](https://github.com/da-itda/mac-hangul-filename-fixer/releases)에서 관리합니다. 설치된 앱은 GitHub의 업데이트 정보를 확인하고, 서명이 검증된 업데이트를 설치한 뒤 다시 시작합니다.
 
+## 웹에 올릴 때 파일명이 깨진다면 (브라우저 확장)
+
+맥에서 Chrome으로 파일을 올리면 디스크의 이름이 정상이어도 `ㅎㅏㄴㄱㅡㄹ.pdf`처럼 자소가 분리되어 올라갈 수 있습니다. 맥용 Chrome이 업로드할 때 이름을 다시 분리하기 때문입니다. 한글본드 브라우저 확장을 설치하면 업로드할 때 이름을 NFC로 바꿔 보냅니다. Safari는 브라우저가 직접 NFC로 바꿔 보내므로 확장이 필요 없습니다.
+
+자세한 내용은 [브라우저 확장 안내](docs/BROWSER_EXTENSION.md)를 참고하세요.
+
 ## 문제가 해결되지 않을 때
 
 이 앱은 Unicode NFC/NFD 자소 분리로 생긴 이름을 정리합니다. 파일명이 CP949 등 다른 인코딩 문제로 완전히 다른 문자로 보이는 경우에는 해결되지 않을 수 있습니다. 처리 내역은 앱의 `로그` 탭에서 확인하세요.
@@ -52,4 +58,4 @@
 - [릴리스 기록](docs/RELEASE_HISTORY.md)
 - 구현: Tauri 2, Rust, JavaScript
 
-소스에서 실행하려면 Node.js 20 이상과 Rust를 준비한 뒤 저장소 루트에서 `npm install`과 `npm run dev`를 실행하세요. 테스트는 `npm test`와 `npm run test:rust`로 실행할 수 있습니다.
+소스에서 실행하려면 Node.js 20 이상과 Rust를 준비한 뒤 저장소 루트에서 `npm install`과 `npm run dev`를 실행하세요. 테스트는 `npm test`와 `npm run test:rust`로 실행할 수 있습니다. 브라우저 확장 테스트는 `npm run test:extension`입니다.

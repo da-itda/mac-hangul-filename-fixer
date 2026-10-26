@@ -1,0 +1,29 @@
+<!doctype html><meta charset="utf-8"><title>store screenshot</title>
+<style>
+  body { margin: 0; width: 1280px; height: 800px; font-family: -apple-system, "Apple SD Gothic Neo", sans-serif; background: #f4f6fb; color: #1d1d1f; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .head { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; }
+  .head img { width: 72px; height: 72px; }
+  h1 { font-size: 44px; margin: 0; letter-spacing: -0.5px; }
+  .sub { font-size: 22px; color: #5b5f6b; margin: 0 0 48px; }
+  .cards { display: flex; gap: 40px; }
+  .card { width: 500px; background: #fff; border-radius: 20px; padding: 32px; box-shadow: 0 10px 30px rgba(20,30,60,.08); }
+  .label { font-size: 18px; font-weight: 600; color: #5b5f6b; margin-bottom: 20px; }
+  .file { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 12px; font-size: 22px; }
+  .file .ic { width: 34px; height: 42px; border-radius: 5px; background: #e34c4c; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; box-sizing: border-box; }
+  .bad { background: #fdecec; color: #b42318; }
+  .good { background: #e8f7ee; color: #146c2e; }
+  .note { font-size: 16px; color: #8a8f9c; margin-top: 14px; }
+  .points { display: flex; gap: 28px; margin-top: 48px; font-size: 19px; color: #3a3d45; }
+  .points span::before { content: "✓ "; color: #146c2e; font-weight: 700; }
+</style>
+<div class="head"><img src="icon.png" alt=""><h1>맥에서 올린 한글 파일명, 깨지지 않게</h1></div>
+<p class="sub">Chrome에서 파일을 올릴 때 파일명을 NFC로 바꿔 보냅니다</p>
+<div class="cards">
+  <div class="card"><div class="label">확장 없이 올리면 (Windows·웹에서 보이는 이름)</div>
+    <div class="file bad"><div class="ic">PDF</div>ㅂㅗㄱㅗㅅㅓ_ㅊㅚㅈㅗㅇㅂㅗㄴ.pdf</div>
+    <div class="note">맥 Chromium이 파일명을 자소 분리(NFD) 형태로 전송</div></div>
+  <div class="card"><div class="label">한글본드 확장을 켜면</div>
+    <div class="file good"><div class="ic">PDF</div>보고서_최종본.pdf</div>
+    <div class="note">페이지가 파일을 읽기 전에 이름만 NFC로 변환</div></div>
+</div>
+<div class="points"><span>파일 선택·드래그 앤 드롭</span><span>파일 내용은 그대로</span><span>데이터 수집·외부 전송 없음</span></div>

@@ -20,12 +20,12 @@ Chromium(Chrome·Aside·Edge·Electron 앱)이 맥에서만 NFD로 보내는 이
 - Chromium의 macOS 전용 코드가 경로를 받을 때 HFS식 분해형으로 바꾼다 (`base/apple/foundation_util.mm` `CFStringToFilePath` → `FilePath::GetHFSDecomposedForm`, `IS_APPLE` 전용).
 - 경로를 직접 넘겨 이 변환을 건너뛰면 Chrome은 NFC를 그대로 보낸다 (2026-10-26 CDP 실험). 즉 디스크 이름과 상관없이 맥 Chromium에서는 NFD가 된다.
 - Windows판에는 이 변환이 없다 (`ui/shell_dialogs/execute_select_file_win.cc`). Windows 디스크 이름이 NFC면 NFC로 전송될 것으로 보인다. 실제 Windows 테스트는 아직 하지 않았다.
-- 페이지가 파일을 읽기 전에 파일명을 NFC로 바꾸는 스크립트(확장 프로그램 방식)로 `<input type=file>` 업로드는 NFC로 보낼 수 있다 (CDP 실험 통과). 드래그 앤 드롭, Electron 앱은 아직 확인하지 않았다.
+- 페이지가 파일을 읽기 전에 파일명을 NFC로 바꾸는 확장으로 파일 선택·일반 폼·드래그 앤 드롭 업로드를 NFC로 보낼 수 있다 (`npm run test:extension`). Electron 앱에는 적용할 수 없다.
 
 해결 방향:
-- 보내는 쪽: 웹 업로드는 Safari를 쓴다. Chromium 계열 브라우저와 Mail·텔레그램은 한글본드로 고칠 수 없다.
+- 보내는 쪽: 맥 Chrome 웹 업로드는 한글본드 브라우저 확장으로 보정한다 (`docs/BROWSER_EXTENSION.md`). Safari는 확장 없이 정상이다. Mail·텔레그램·Electron 앱은 고칠 수 없다.
 - 받는 쪽: 직접 운영하는 웹 서비스라면 서버에서 업로드 파일명을 NFC로 정규화한다(PHP `Normalizer::normalize($name, Normalizer::FORM_C)`, JS `name.normalize("NFC")`, Python `unicodedata.normalize("NFC", name)`).
-- Windows 수신자: Windows용 한글본드로 저장된 파일명을 정리한다 (`docs/PLAN.md`).
+- Windows 수신자: Windows용 한글본드로 저장된 파일명을 정리한다 (계획 검토 중).
 
 ## 프로젝트를 옮긴 뒤 `cargo test`·`npm run dev`가 실패한다
 

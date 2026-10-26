@@ -1,0 +1,5 @@
+{
+  "extName": { "message": "HangulBond - Fix Korean filenames on upload" },
+  "extShortName": { "message": "HangulBond" },
+  "extDescription": { "message": "Uploads files from macOS with NFC filenames so Korean and accented names are not split into decomposed characters." }
+}
