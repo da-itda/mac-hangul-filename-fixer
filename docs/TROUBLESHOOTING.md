@@ -37,6 +37,12 @@ Chromium(Chrome·Aside·Edge·Electron 앱)이 맥에서만 NFD로 보내는 이
 - 원인: 한 번 실행된 앱은 macOS 앱 보호(`com.apple.macl`) 때문에 쓰기 권한 검사(`[ -w ]`, `access()`)가 거짓으로 나온다. 실제 이동·삭제는 일반 권한으로 된다.
 - 해결: `install.sh`는 미리 검사하지 않고 일반 권한으로 먼저 실행한 뒤 실패할 때만 `sudo`를 쓴다. 기존 앱은 옆으로 옮겨 두었다가 새 앱 복사가 끝나면 지운다.
 
+## 앱이나 터미널 설치가 Chrome 확장을 등록하지 못한다
+
+- 원인: macOS 27(2026-10-29 확인, 27.0.1)은 다른 앱의 데이터 폴더(`~/Library/Application Support/Google/Chrome`)를 읽거나 쓰는 것을 막는다. Finder·`open`으로 실행한 앱과 기본 `터미널`은 `Operation not permitted`가 나고 알림창도 뜨지 않는다. `전체 디스크 접근` 권한이 있는 터미널(예: Ghostty)이나 터미널에서 실행 파일을 직접 띄우면 된다. 그래서 개발 실행(`npm run dev`)에서는 재현되지 않는다.
+- 확인: 작은 AppleScript 앱(`osacompile`)을 `open`으로 실행해 `ls`·`mkdir`가 막히는지 본다. 네트워크(웹 스토어 302)는 정상이다.
+- 해결: 등록이 막히면 0.1.8부터 처음 설치한 앱이 Chrome 웹 스토어를 한 번 열고, `정보` 탭에 `웹 스토어에서 설치`를 보여 준다. `install.sh`는 멈추지 않고 웹 스토어 주소를 안내한다. 이 환경에서는 확장이 이미 설치됐는지도 알 수 없다.
+
 ## 프로젝트를 옮긴 뒤 `cargo test`·`npm run dev`가 실패한다
 
 - 원인: `src-tauri/target/`에 이전 경로(SynologyDrive)가 남아 있다.

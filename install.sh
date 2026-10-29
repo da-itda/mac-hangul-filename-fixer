@@ -86,10 +86,16 @@ install_extension() {
     return
   fi
   step "Chrome 확장을 등록합니다."
-  mkdir -p "$(dirname "$CHROME_EXT_FILE")"
-  printf '{\n  "external_update_url": "https://clients2.google.com/service/update2/crx"\n}\n' >"$CHROME_EXT_FILE"
-  note "Chrome을 완전히 종료(⌘Q)한 뒤 다시 열면 '새 확장 프로그램이 추가됨' 알림이 나옵니다."
-  note "알림에서 '확장 프로그램 사용 설정'을 누르세요. 알림이 없으면: $STORE_URL"
+  # macOS 27부터는 터미널에 '전체 디스크 접근' 권한이 없으면 Chrome 데이터 폴더에 쓸 수 없다.
+  if mkdir -p "$(dirname "$CHROME_EXT_FILE")" 2>/dev/null \
+    && printf '{\n  "external_update_url": "https://clients2.google.com/service/update2/crx"\n}\n' >"$CHROME_EXT_FILE" 2>/dev/null; then
+    note "Chrome을 완전히 종료(⌘Q)한 뒤 다시 열면 '새 확장 프로그램이 추가됨' 알림이 나옵니다."
+    note "알림에서 '확장 프로그램 사용 설정'을 누르세요. 알림이 없으면: $STORE_URL"
+    return
+  fi
+  # 이미 설치했는지도 알 수 없으므로 여기서 페이지를 열지 않는다. 처음 설치한 앱이 실행되면서 한 번 연다.
+  note "macOS 보안 설정 때문에 Chrome에 자동 등록할 수 없습니다."
+  note "아직 확장을 추가하지 않았다면 Chrome 웹 스토어에서 'Chrome에 추가'를 누르세요: $STORE_URL"
 }
 
 install_app() {

@@ -63,7 +63,8 @@ const EXTENSION_LABELS = {
   installed: "설치됨",
   registered: "Chrome 재시작 후 사용 설정",
   notPublished: "공개 준비 중",
-  notRegistered: "설치 안 됨"
+  notRegistered: "설치 안 됨",
+  storeInstall: "웹 스토어에서 설치"
 };
 
 let folderPath = "";
@@ -517,7 +518,7 @@ async function refreshExtensionState(command = "chrome_extension_status") {
     const state = await invoke(command);
     extensionState.textContent = EXTENSION_LABELS[state] ?? state;
     extensionState.removeAttribute("title");
-    openExtensionStoreButton.hidden = !(state === "registered" || state === "notRegistered");
+    openExtensionStoreButton.hidden = !["registered", "notRegistered", "storeInstall"].includes(state);
   } catch (error) {
     extensionState.textContent = "확인 실패";
     extensionState.title = String(error);

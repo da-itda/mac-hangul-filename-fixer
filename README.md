@@ -39,18 +39,17 @@ curl -fsSL https://raw.githubusercontent.com/da-itda/mac-nfd-nfc-hangulbond/main
 
 - GitHub 최신 릴리스의 설치 파일을 내려받고, 개발자 서명과 Apple 공증을 확인한 뒤 `응용 프로그램` 폴더에 설치합니다.
 - Chrome이 있으면 웹 스토어의 한글본드 확장을 함께 등록합니다. Chrome을 다시 열면 나오는 알림에서 `확장 프로그램 사용 설정`을 누르세요.
+- macOS 보안 설정 때문에 자동 등록이 안 되면, 앱을 처음 실행할 때 Chrome 웹 스토어가 열립니다. `Chrome에 추가`를 누르세요.
 - 앱만 설치하려면 끝에 옵션을 붙입니다: `... | bash -s -- --no-extension`
 - 같은 명령을 다시 실행하면 최신 버전으로 바뀝니다.
 - 실행 전에 스크립트 내용을 확인할 수 있습니다: [install.sh](install.sh)
-
-> Chrome 확장은 현재 웹 스토어 심사 준비 중입니다. 공개 전에는 앱만 설치되며, 공개 후 같은 명령을 다시 실행하면 확장이 등록됩니다.
 
 ### 방법 2. 직접 다운로드
 
 1. [최신 릴리스](https://github.com/da-itda/mac-nfd-nfc-hangulbond/releases/latest)에서 `HangulBond_버전_aarch64.dmg`를 내려받습니다.
 2. DMG를 열고 `한글본드.app`을 `응용 프로그램` 폴더로 끌어 놓습니다.
 3. `응용 프로그램`에서 한글본드를 실행합니다. 메뉴 막대에 한글본드 아이콘이 나타납니다.
-4. Chrome을 쓴다면 앱이 한글본드 확장을 Chrome에 등록합니다. Chrome을 다시 열면 나오는 알림에서 `확장 프로그램 사용 설정`을 누르세요. 알림을 놓쳤다면 앱 `정보` 탭의 `Chrome 확장` → `설치`를 누르거나 [Chrome 웹 스토어](https://chromewebstore.google.com/detail/hmgopkkefgfppfedloeponobiamikomf)에서 추가합니다. (웹 스토어 심사 통과 후 동작합니다)
+4. Chrome을 쓴다면 앱이 한글본드 확장을 Chrome에 등록합니다. Chrome을 다시 열면 나오는 알림에서 `확장 프로그램 사용 설정`을 누르세요. macOS 보안 설정 때문에 등록할 수 없으면 Chrome 웹 스토어가 열리니 `Chrome에 추가`를 누르세요. 나중에 추가하려면 앱 `정보` 탭의 `Chrome 확장` → `설치`를 누르거나 [Chrome 웹 스토어](https://chromewebstore.google.com/detail/hmgopkkefgfppfedloeponobiamikomf)에서 추가합니다.
 
 ## 사용 방법
 

@@ -47,6 +47,8 @@ struct AppState {
     watch_service: Mutex<WatchService>,
     instance_lock: Mutex<Option<fs::File>>,
     manual_operation: Mutex<Option<Arc<AtomicBool>>>,
+    // 처음 설치해 실행한 경우에만 웹 스토어를 한 번 연다. 업데이트 후 재시작 때는 열지 않는다.
+    first_run: AtomicBool,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -327,16 +329,23 @@ async fn chrome_extension_status() -> Result<browser_extension::ExtensionState, 
 }
 
 #[tauri::command]
-async fn register_chrome_extension() -> Result<browser_extension::ExtensionState, String> {
+async fn register_chrome_extension(
+    app: AppHandle,
+) -> Result<browser_extension::ExtensionState, String> {
     let home = home_dir()?;
-    async_runtime::spawn_blocking(move || browser_extension::register(&home))
+    let state = async_runtime::spawn_blocking(move || browser_extension::register(&home))
         .await
-        .map_err(|error| format!("extension register worker failed: {error}"))?
+        .map_err(|error| format!("extension register worker failed: {error}"))??;
+    let first_run = app.state::<AppState>().first_run.swap(false, Ordering::SeqCst);
+    if state == browser_extension::ExtensionState::StoreInstall && first_run {
+        browser_extension::open_store()?;
+    }
+    Ok(state)
 }
 
 #[tauri::command]
 fn open_extension_store() -> Result<(), String> {
-    open_external_url(browser_extension::STORE_URL)
+    browser_extension::open_store()
 }
 
 fn home_dir() -> Result<PathBuf, String> {
@@ -699,6 +708,7 @@ pub fn run() {
             watch_service: Mutex::new(WatchService::new()),
             instance_lock: Mutex::new(None),
             manual_operation: Mutex::new(None),
+            first_run: AtomicBool::new(false),
         })
         .plugin(
             tauri_plugin_autostart::Builder::new()
@@ -792,6 +802,9 @@ pub fn run() {
 
             let settings_path = settings_file_path(app.handle())?;
             let is_first_run = !settings_path.exists();
+            app.state::<AppState>()
+                .first_run
+                .store(is_first_run, Ordering::SeqCst);
             let mut settings = load_settings_from_file(&settings_path)?;
             if legacy_autostart_was_enabled && settings.launch_at_login {
                 let _ = sync_launch_at_login(app.handle(), true);
