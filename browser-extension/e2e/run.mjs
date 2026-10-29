@@ -5,6 +5,7 @@
 // 실행: npm run test:extension
 // 설치된 Chrome을 임시 프로필로 띄우고, 공식 디버깅 명령(Extensions.loadUnpacked)으로 확장을 설치한다.
 // 평소 쓰는 Chrome 프로필은 건드리지 않는다. 다른 Chrome을 쓰려면 CHROME_PATH를 지정한다.
+// 웹 스토어에서 받은 패키지를 풀어 검사하려면 EXTENSION_DIR에 그 폴더를 지정한다.
 import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -14,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const chromePath = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
-const extensionDir = fileURLToPath(new URL("../extension/", import.meta.url));
+const extensionDir = process.env.EXTENSION_DIR || fileURLToPath(new URL("../extension/", import.meta.url));
 const workDir = mkdtempSync(join(tmpdir(), "hangulbond-ext-e2e-"));
 const nfdName = "보고서_최종본.txt".normalize("NFD");
 const nfcName = "회의록_정리.txt".normalize("NFC");
